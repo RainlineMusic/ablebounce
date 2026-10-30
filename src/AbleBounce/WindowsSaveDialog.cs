@@ -16,20 +16,22 @@ public static class WindowsSaveDialog
     private static AutomationElement? Editable(AutomationElement? host)
     {
         if (host == null) return null;
-        if (host.TryGetCurrentPattern(ValuePattern.Pattern, out _)) return host;
-        return host.FindFirst(TreeScope.Descendants,
+        if (host.Current.ControlType == ControlType.Edit) return host;
+        var edit = host.FindFirst(TreeScope.Descendants,
             new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit));
+        return edit ?? (host.TryGetCurrentPattern(ValuePattern.Pattern, out _) ? host : null);
     }
 
     private static AutomationElement? Filename(AutomationElement dialog)
     {
-        var field = Editable(ById(dialog, "FileNameControlHost"))
-            ?? Editable(ById(dialog, "1148", ControlType.ComboBox))
-            ?? ById(dialog, "1152", ControlType.Edit);
-        if (field != null) return field;
-        // 1001 alone is generic: require a file-type selector as well.
+        var modern = Editable(ById(dialog, "FileNameControlHost"));
+        if (modern != null) return modern;
+        // Numeric edit IDs occur in other dialogs too. Require the file-type
+        // selector before accepting a legacy filename combo/edit.
         if (ById(dialog, "FileTypeControlHost") != null || ById(dialog, "1136", ControlType.ComboBox) != null)
-            return ById(dialog, "1001", ControlType.Edit);
+            return Editable(ById(dialog, "1148", ControlType.ComboBox))
+                ?? ById(dialog, "1152", ControlType.Edit)
+                ?? ById(dialog, "1001", ControlType.Edit);
         return null;
     }
 
@@ -61,12 +63,14 @@ public static class WindowsSaveDialog
             throw new IOException("Windows did not expose an editable filename field. No filename was entered.");
         var value = (ValuePattern)pattern;
         if (value.Current.IsReadOnly) throw new IOException("The Save filename field is read-only.");
+        field.SetFocus();
         value.SetValue(path);
         if (!string.Equals(value.Current.Value, path, StringComparison.OrdinalIgnoreCase))
             throw new IOException("The Save filename readback did not match.");
         var save = ById(dialog, "1", ControlType.Button);
         if (save == null || !save.Current.IsEnabled || !save.TryGetCurrentPattern(InvokePattern.Pattern, out var invoke))
             throw new IOException("The Windows Save button is unavailable.");
+        save.SetFocus(); // Commit the edit before invoking the default action.
         ((InvokePattern)invoke).Invoke();
     }
 }

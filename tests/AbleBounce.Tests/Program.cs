@@ -63,7 +63,7 @@ try
         Check(File.ReadAllText(sentinel) == "original", "Existing source was modified");
         WindowsSaveDialog.Submit(dialog!, process, expected);
         var selected = await finished.Task.WaitAsync(TimeSpan.FromSeconds(20));
-        Check(string.Equals(selected, expected, StringComparison.OrdinalIgnoreCase), "Native Save path did not match");
+        Check(string.Equals(selected, expected, StringComparison.OrdinalIgnoreCase), $"Native Save path did not match. Expected: {expected}; selected: {selected}");
     }
     await CheckNativeSaveDialog(Path.Combine(temp, "Native save"), "Working copy.als");
     await CheckNativeSaveDialog(Path.Combine(temp, "Проект с пробелами"), "Вокал__AbleBounce_тест.als");
