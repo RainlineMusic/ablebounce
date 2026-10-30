@@ -22,6 +22,8 @@ try
         Check(request.RootElement.GetProperty("args").GetProperty("nested").GetProperty("label").GetString() == "Lead\nVocal",
             "Escaped newline did not round-trip");
     }
+    Check(new TrackRow(new TrackInfo { Parent = "group", SuggestedRole = "Lead" }, 1, 1).Role == "Inherit", "Grouped tracks must default to Inherit");
+    Check(new TrackRow(new TrackInfo { Parent = "group" }, 1, 1, "Backing").Role == "Backing", "Explicit child roles must be preserved");
     Check(Storage.Json.WriteIndented, "Wire encoding must not change settings serialization");
     foreach (var version in new[] { "12.4.0", "12.4.5", "12.4.6", "12.4.99" })
         Check(LiveCompatibility.IsSupported(version), $"Supported patch rejected: {version}");

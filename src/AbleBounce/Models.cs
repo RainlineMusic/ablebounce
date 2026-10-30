@@ -68,7 +68,7 @@ public sealed class TrackRow : Observable
     public Thickness Indent { get; }
     public TrackRow(TrackInfo info, int number, int depth, string? role = null)
     {
-        Info = info; _role = role ?? info.SuggestedRole;
+        Info = info; _role = role ?? (info.Parent != null ? "Inherit" : info.SuggestedRole);
         Number = number.ToString("D2"); Indent = new Thickness(depth * 13, 0, 0, 0);
     }
 }
