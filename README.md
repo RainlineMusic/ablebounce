@@ -51,7 +51,7 @@ Read [QUICK_START.md](docs/QUICK_START.md) for the complete procedure.
    **User Library** folder.
 2. Restart Live. In **Settings → Link, Tempo & MIDI**, select **AbleBounce** in a
    free Control Surface slot. Set Input and Output to **None**.
-3. Open a saved Arrangement Set, stop playback and click **Connect**.
+3. Open an Arrangement Set, stop playback and click **Connect**.
 4. Review role suggestions. Any number of tracks or groups can be Lead/Backing.
    Children may inherit their parent role. Mark other audio tracks Instrument.
 5. Prepare Live's export dialog as described in the calibration prompt. Set
@@ -98,26 +98,19 @@ routing or readback failure stops the batch. Other export switches are user-mana
 
 ## Project protection and recovery
 
-Before bridge mutations the app performs Live **Save As** to a uniquely named
-sibling `__AbleBounce_….als`. Keeping it in the same folder preserves relative
-sample paths. Current unsaved edits are included in this working copy; the
-original file is not saved or overwritten. Save the original manually first if
-you want those edits stored there too.
+AbleBounce exports from the current open Set. It never invokes Live Save or
+Save As and does not create a working `.als` copy. Unsaved Sets are supported.
+The bridge captures parameter values, device activator and automation override
+states before changes, restores them after each pass and at batch end, and
+retains failed restorations for retry with **Restore Set**.
 
-The bridge stores exact parameter values, own device activator states and
-automation override states before changes. It restores after each pass and at
-batch end. The app leaves the restored working Set open; it does not switch to an
-older saved original and accidentally lose current edits. It does not save the
-temporary mutations. After a Live crash, reopen the saved working copy baseline.
-
-If the app stops unexpectedly, reconnect and choose **Restore working Set**. If
-Live is still rendering or has a modal dialog open, cancel/close it first. Failed
-restoration retains pending changes for retry. Do not save a modified working
-Set while restoration is pending. The source file is always the fallback.
+Do not manually save while temporary export changes are active. No disk recovery
+copy is created: if Live itself crashes, recovery depends on Live's recovery and
+your own saved project. Unsaved edits are not backed up by AbleBounce.
 
 A manifest is written with delivered files, track roles and audio format. Partial
 exports stay in their unique output batch folder. Existing deliveries are never
-overwritten. Source files, working Sets and user media are never deleted.
+overwritten. Source files and user media are never deleted.
 
 ## Current limits
 
@@ -154,7 +147,7 @@ dotnet publish src/AbleBounce/AbleBounce.csproj -c Release -r win-x64 --self-con
 `AbleBounce.exe --demo` runs a clearly labelled design preview without Live.
 `--demo --screenshot preview.png` captures the actual WPF window and exits.
 
-Version 0.1.3 retains the 0.1.2 Windows Save-dialog fix: paths are entered through
+Version 0.1.4 retains the 0.1.2 Windows Save-dialog fix: paths are entered through
 the identified filename control and read back before submission. Windows tests
 exercise real Save dialogs, including spaces and Cyrillic paths. These tests do
 not exercise Live’s own dialogs.

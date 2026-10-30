@@ -69,28 +69,6 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
         Guard();
         await WindowsSaveDialog.Submit(dialog, Live.Id, path, ct);
     }
-    public async Task<string> CreateWorkingCopy(SessionInfo session, CancellationToken ct)
-    {
-        Attach(); await Native.Focus(Live, ct);
-        var directory = Path.GetDirectoryName(session.Path) ?? throw new InvalidOperationException("The source Set is not saved.");
-        var path = Path.Combine(directory, $"{Storage.SafeName(Path.GetFileNameWithoutExtension(session.Path))}__AbleBounce_{DateTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N")[..6]}.als");
-        if (File.Exists(path)) throw new IOException("Working Set already exists.");
-        Guard(); Native.Chord(Native.Ctrl, Native.Shift, (ushort)'S');
-        await SaveDialog(path, ct);
-        var end = DateTime.UtcNow.AddSeconds(25);
-        while (DateTime.UtcNow < end)
-        {
-            ct.ThrowIfCancellationRequested();
-            try
-            {
-                var scan = await bridge.Scan(ct);
-                if (string.Equals(scan.Path, path, StringComparison.OrdinalIgnoreCase) && File.Exists(path)) return path;
-            }
-            catch (TimeoutException) { }
-            await Task.Delay(300, ct);
-        }
-        throw new InvalidOperationException("Live did not confirm the working Set path. Nothing has been changed by the bridge.");
-    }
     public async Task<List<string>> Render(int job, int bits, string directory, int expectedFiles, Action<string> report, CancellationToken ct)
     {
         Attach(); await Native.Focus(Live, ct);
@@ -187,7 +165,7 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
             }
             catch (TimeoutException) { }
         }
-        throw new InvalidOperationException("Live still has a render or modal dialog open. Cancel it in Live, then click Restore working Set.");
+        throw new InvalidOperationException("Live still has a render or modal dialog open. Cancel it in Live, then click Restore Set.");
     }
 }
 

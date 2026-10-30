@@ -10,7 +10,7 @@
 - Calibrated Windows GUI driver: Win32 SendInput with foreground process checks,
   common file dialog detection/filename readback through UIA, source/bit-depth
   visual checks. Fixed export switches remain user-managed.
-- Queue: preflight → Save As working copy → begin → prepare → native export → WAV
+- Queue: preflight → begin → prepare → native export → WAV
   verification → delivery mapping → restore → next job → final restore.
 
 There is no claimed headless Live audio renderer and no claimed public export API.
@@ -48,10 +48,10 @@ offline rendering. Desktop cancellation first cancels modal/render UI, waits for
 the Live thread and then restores. If that cannot be established, the transaction
 is retained and the app explicitly requests manual cancellation before Restore.
 
-Original `.als` files are untouched. Save As uses a unique sibling path so relative
-media references stay valid; that saved working baseline is the crash recovery
-point. Current unsaved source edits are included in it. Export mutations are not
-automatically saved. Local `last-session.json` records source/working/output paths.
+Export uses the current open Set, including unsaved Sets. No project Save/Save As
+command is sent and no `.als` copy is created. Local `last-session.json` records
+the source and output paths. In-memory restoration remains transaction based;
+there is no AbleBounce disk backup for a Live process crash.
 
 ## Export profile and validation scope
 

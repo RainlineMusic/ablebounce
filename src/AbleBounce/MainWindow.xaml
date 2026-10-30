@@ -68,7 +68,7 @@
    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,6,0,0">
     <Button Content="Export selected" Click="Export_Click" IsEnabled="{Binding CanExport}" Padding="10,5" Margin="0,0,8,0"/>
     <Button x:Name="CancelButton" Content="Cancel &amp; restore" Click="Cancel_Click" IsEnabled="{Binding ExportRunning}" Padding="10,5" Margin="0,0,8,0"/>
-    <Button Content="Restore working Set" Click="Restore_Click" IsEnabled="{Binding Idle}" Padding="10,5" Margin="0,0,8,0"/>
+    <Button Content="Restore Set" Click="Restore_Click" IsEnabled="{Binding Idle}" Padding="10,5" Margin="0,0,8,0"/>
     <Button Content="Activity" Click="Activity_Click" Padding="10,5"/>
    </StackPanel>
    <TextBlock Text="{Binding Status}" TextWrapping="Wrap" MaxHeight="42"/>

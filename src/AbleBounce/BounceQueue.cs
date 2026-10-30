@@ -18,23 +18,19 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
         var current = await bridge.Scan(ct);
         if (current.Path != source.Path || !current.Tracks.Select(t => (t.Key, t.Name, t.Parent)).SequenceEqual(source.Tracks.Select(t => (t.Key, t.Name, t.Parent))))
             throw new InvalidOperationException("The Set changed after scanning. Connect again to review its track roles.");
-        if (current.Transaction != null) throw new InvalidOperationException("Restore the unfinished working Set before starting a new batch.");
+        if (current.Transaction != null) throw new InvalidOperationException("Restore the unfinished current Set before starting a new batch.");
         await bridge.Call("preflight", new { jobs, roles }, ct);
-        var root = Path.Combine(Path.GetFullPath(output), Storage.SafeName(Path.GetFileNameWithoutExtension(source.Path)) + "_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + "_" + Guid.NewGuid().ToString("N")[..5]);
+        var root = Path.Combine(Path.GetFullPath(output), Storage.SafeName(string.IsNullOrWhiteSpace(source.Path) ? source.Name : Path.GetFileNameWithoutExtension(source.Path)) + "_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + "_" + Guid.NewGuid().ToString("N")[..5]);
         Directory.CreateDirectory(root);
-        report("Creating a separate working Set in the same project folder…");
-        string working = await _driver.CreateWorkingCopy(source, ct);
-        var workingScan = await bridge.Scan(ct);
-        if (!workingScan.Tracks.Select(t => (t.Key, t.Name, t.Parent)).SequenceEqual(source.Tracks.Select(t => (t.Key, t.Name, t.Parent))))
-            throw new InvalidOperationException("The Set structure changed while creating the working copy. Connect again and review roles.");
+        report("Exporting from the current open Set. No project files will be saved.");
         var begun = await bridge.Call("begin", new { jobs, roles }, ct);
         _transaction = begun.GetProperty("transaction").GetString() ?? throw new IOException("Live did not create a transaction.");
-        Storage.Write("last-session.json", new { source = source.Path, working, output = root, transaction = _transaction, state = "running" });
         var delivered = new List<object>();
         WaveInfo? range = null;
         Exception? originalError = null;
         try
         {
+            Storage.Write("last-session.json", new { source = source.Path, output = root, transaction = _transaction, state = "running" });
             for (int i = 0; i < jobs.Length; i++)
             {
                 ct.ThrowIfCancellationRequested();
@@ -60,8 +56,8 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
                 jobState(job, "Done");
                 File.WriteAllText(Path.Combine(root, "manifest.json"), JsonSerializer.Serialize(new
                 {
-                    application = "AbleBounce 0.1.3", live_version = source.Version, source_set = source.Path,
-                    working_set = working, bit_depth = bits, roles,
+                    application = "AbleBounce 0.1.4", live_version = source.Version, source_set = source.Path,
+                    bit_depth = bits, roles,
                     range = "Reused Live Export dialog start/length; sample rate set in Live", deliveries = delivered,
                     multitrack_note = "Tracks are pre-parent-bus, post-fader. Groups/Returns are alternatives; do not sum every group with all its children.",
                     lead_trim_note = "A final Utility trims each selected lead root by -6 dB, including its own sends; descendant sends bypassing a selected group retain their original level."
@@ -73,17 +69,17 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
         {
             try
             {
-                report("Restoring the working Set…");
+                report("Restoring the current Set…");
                 await _driver.EnsureStopped();
                 await bridge.Call("restore", new { transaction = _transaction, final = true }, timeoutSeconds: 30);
                 _transaction = null;
-                Storage.Write("last-session.json", new { source = source.Path, working, output = root, state = originalError == null ? "complete" : "stopped_and_restored" });
-                report(originalError == null ? "Batch complete. Working Set restored; original Set untouched." : "Batch stopped. Working Set restored; completed files kept.");
+                Storage.Write("last-session.json", new { source = source.Path, output = root, state = originalError == null ? "complete" : "stopped_and_restored" });
+                report(originalError == null ? "Batch complete. Current Set restored." : "Batch stopped. Current Set restored; completed files kept.");
             }
             catch (Exception restoreError)
             {
-                Storage.Write("last-session.json", new { source = source.Path, working, output = root, transaction = _transaction, state = "restore_required", error = restoreError.Message });
-                throw new InvalidOperationException("Restoration needs attention: " + restoreError.Message + " Do not save the modified working Set. Cancel its render/dialog and use Restore working Set. Original error: " + (originalError?.Message ?? "none"), restoreError);
+                Storage.Write("last-session.json", new { source = source.Path, output = root, transaction = _transaction, state = "restore_required", error = restoreError.Message });
+                throw new InvalidOperationException("Restoration needs attention: " + restoreError.Message + " Do not save the modified current Set. Cancel its render/dialog and use Restore Set. Original error: " + (originalError?.Message ?? "none"), restoreError);
             }
         }
         return root;

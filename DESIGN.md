@@ -1,6 +1,6 @@
 # AbleBounce interface
 
-AbleBounce 0.1.3 is a plain Windows prototype. Use standard, uncolored WPF buttons,
+AbleBounce 0.1.4 is a plain Windows prototype. Use standard, uncolored WPF buttons,
 DataGrids, ComboBoxes, CheckBoxes, text fields and GroupBoxes. `App.xaml` has empty
 application resources: no custom control templates, palette, brand mark, shadows
 or motion. Windows/WPF defaults provide control appearance and interaction.
@@ -12,7 +12,7 @@ the Windows ControlBrush. A 10-DIP outer margin contains:
 - Current Set name, then Track roles and Export variants DataGrids side by side.
 - Bit depth and output folder with Browse below the grids.
 - A visible list of export settings that the user must configure in Live.
-- Status text, Export selected, Cancel & restore, Restore working Set and Activity.
+- Status text, Export selected, Cancel & restore, Restore Set and Activity.
 
 The grids use a 2:3 width ratio with an 8-DIP gap. Track names are indented by
 hierarchy and show full names in tooltips. Roles use editable selectors; delivery

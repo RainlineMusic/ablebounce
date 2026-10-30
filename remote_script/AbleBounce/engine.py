@@ -113,7 +113,7 @@ class Engine:
 
     def check_structure(self):
         if self.fingerprint is not None and self.structure() != self.fingerprint:
-            raise BounceError("Set structure changed. Restore the working Set before continuing.")
+            raise BounceError("Set structure changed. Restore the current Set before continuing.")
 
     def parent(self, track):
         return getattr(track, "group_track", None)
@@ -202,8 +202,6 @@ class Engine:
         self.require_idle()
         self.roles = dict(roles)
         self.validate_roles()
-        if not self.song.file_path:
-            raise BounceError("Save your Live Set before exporting.")
         if self.song.is_playing or getattr(self.song, "record_mode", False):
             raise BounceError("Stop playback and recording before exporting.")
         if bool(getattr(self.song, "back_to_arranger", False)):
@@ -446,7 +444,7 @@ class Engine:
                 leftover.append((track, device))
         self.utilities = list(reversed(leftover))
         if errors:
-            raise BounceError("Restoration incomplete. Keep the working copy open: " + "; ".join(errors))
+            raise BounceError("Restoration incomplete. Keep the current Set open: " + "; ".join(errors))
         if final:
             self.transaction = None
             self.fingerprint = None
@@ -471,3 +469,4 @@ class Engine:
                 raise BounceError("Transaction does not match.")
             return self.restore(final=bool(arguments.get("final", True)))
         raise BounceError("Unknown method: " + str(method))
+

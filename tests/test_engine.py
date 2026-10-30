@@ -130,6 +130,15 @@ class EngineTests(unittest.TestCase):
                  tuple((p, p.value, p.automation_state) for p in [t.mixer_device.volume, t.mixer_device.track_activator] + t.mixer_device.sends + [p for d in t.devices for p in d.parameters]))
                 for t in self.engine.all_tracks()]
 
+    def test_unsaved_set_exports_and_restores_without_saving(self):
+        self.song.file_path = ""
+        original = self.snapshot()
+        token = self.begin([2])
+        self.engine.prepare(2, token)
+        self.engine.restore()
+        self.assertEqual(original, self.snapshot())
+        self.assertEqual(self.song.file_path, "")
+
     def test_all_nine_restore_to_exact_baseline(self):
         original = self.snapshot()
         token = self.begin()
@@ -399,3 +408,4 @@ class EngineTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

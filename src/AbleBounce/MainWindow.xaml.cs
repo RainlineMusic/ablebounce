@@ -41,7 +41,7 @@ public partial class MainWindow : Window
     private static string RoleFile(string path) => "roles/" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(path.ToLowerInvariant())))[..24] + ".json";
     private void SaveRoles()
     {
-        if (_session == null || _demo || _session.Transaction != null) return;
+        if (_session == null || _demo || _session.Transaction != null || string.IsNullOrWhiteSpace(_session.Path)) return;
         Storage.Write(RoleFile(_session.Path), _vm.Tracks.ToDictionary(t => t.Info.Key, t => new SavedRole(t.Name, t.Role)));
     }
     private sealed record SavedRole(string Name, string Role);
@@ -52,7 +52,7 @@ public partial class MainWindow : Window
         if (session.Protocol != 1) throw new InvalidOperationException("Bridge protocol mismatch. Install the bridge included with this version.");
         if (!LiveCompatibility.IsSupported(session.Version)) throw new InvalidOperationException($"Live {session.Version} is outside the supported 12.4.x branch. Use any Live 12.4 patch release.");
         _session = session;
-        var saved = Storage.Read<Dictionary<string, SavedRole>>(RoleFile(session.Path));
+        var saved = string.IsNullOrWhiteSpace(session.Path) ? null : Storage.Read<Dictionary<string, SavedRole>>(RoleFile(session.Path));
         _vm.Tracks.Clear();
         var tracks = session.Tracks.Where(t => !t.Master && !t.Return).ToArray();
         for (int i = 0; i < tracks.Length; i++)
@@ -67,7 +67,7 @@ public partial class MainWindow : Window
         _vm.Project = string.IsNullOrEmpty(session.Name) ? "Untitled Set" : session.Name;
         _vm.Connection = "Live " + session.Version + " · Connected";
         _vm.Connected = true;
-        _vm.AddLog(session.Transaction != null ? "An unfinished transaction exists. Click Restore working Set before exporting." : "Connected. Review track roles and calibrate export before the first batch.");
+        _vm.AddLog(session.Transaction != null ? "An unfinished transaction exists. Click Restore Set before exporting." : "Connected. Review track roles and calibrate export before the first batch.");
     }
     private async void Connect_Click(object sender, RoutedEventArgs e)
     {
@@ -138,7 +138,7 @@ public partial class MainWindow : Window
         var profile = Storage.Read<ExportProfile>("export-profile.json");
         if (profile == null) { MessageBox.Show("Calibrate Live's export dialog first."); return; }
         if (MessageBox.Show(this,
-            "AbleBounce will create a working .als beside your current Set. Your original file stays untouched.\n\nClose Live's Export dialog before continuing. Keep the desktop unlocked and let AbleBounce control Live. All passes reuse the export range and sample rate configured in Live.\n\nManually set WAV/stereo, PCM On, No Dither. Turn Normalize, Mono, Loop, MP3 and Include Return and Main Effects Off. AbleBounce does not verify these switches.\n\nSave your original Set in Live first if you want its latest edits stored there too. The working copy will include the current edits.",
+            "AbleBounce exports from the current open Set without saving it or creating a copy. Temporary track and device changes are restored after export.\n\nClose Live's Export dialog before continuing. Keep the desktop unlocked and let AbleBounce control Live. All passes reuse the export range and sample rate configured in Live.\n\nManually set WAV/stereo, PCM On, No Dither. Turn Normalize, Mono, Loop, MP3 and Include Return and Main Effects Off. AbleBounce does not verify these switches.",
             "Start batch export", MessageBoxButton.OKCancel, MessageBoxImage.Information) != MessageBoxResult.OK) return;
         _vm.Busy = true; _vm.ExportRunning = true; _cancellation = new();
         SaveRoles();
@@ -191,7 +191,7 @@ public partial class MainWindow : Window
             var scan = await _bridge.Scan();
             if (scan.Transaction == null) { _vm.AddLog("No pending bridge changes in this Live Set."); return; }
             await _bridge.Call("restore", new { transaction = scan.Transaction, final = true }, timeoutSeconds: 30);
-            _vm.AddLog("Working Set restored. Original Set untouched.");
+            _vm.AddLog("Current Set restored.");
             await Connect();
         }
         catch (Exception ex) { ShowError(ex); }

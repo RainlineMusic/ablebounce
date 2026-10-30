@@ -11,7 +11,7 @@ integration preview; end-to-end Live validation has not yet been performed.
 3. Restart Live. Under **Settings → Link, Tempo & MIDI → Control Surface**, select
    **AbleBounce** in an unused slot, with Input/Output **None**. Other controller
    slots are not modified. The bridge occupies one Control Surface slot.
-4. Open your saved Set, stop playback and return all tracks to Arrangement. Clear
+4. Open your Set, stop playback and return all tracks to Arrangement. Clear
    Solo buttons. Resolve missing plugins, missing samples and authorisation dialogs.
 5. Click **Connect**. Review roles for every audio-producing leaf track.
    Use **Inherit** inside explicitly classified groups. Do not classify a mixed
@@ -56,9 +56,8 @@ Recalibrate if those change or the exact Live patch changes. When finished,
 
 Select any of the nine variants, 16/24/32-bit float and an export destination.
 Review the manual settings in Live before each batch; calibration does not
-verify them. Click **Export selected**. Live Save As
-creates a unique sibling working Set and the app verifies that Live has switched
-to it before applying changes. No original file is overwritten.
+verify them. Click **Export selected**. Export runs directly from the current
+open Set. No Save As dialog or project copy is involved; unsaved Sets work too.
 
 Leave the desktop unlocked and do not interact with Live. During rendering, use
 the app's **Cancel & restore** if needed. Cancellation may take a moment because
@@ -66,8 +65,7 @@ the render must stop before it is safe to change device/track states.
 
 Use **Activity** to inspect the session log. The output folder opens on completion.
 Mixes, dry vocal and multitrack folders contain the finished files. `manifest.json` records the batch. Staging files are
-kept if a validation failed. The restored working Set remains open; review it or
-reopen your original Set as appropriate.
+kept if a validation failed. The current Set remains open with its temporary export changes restored.
 
 ## If something stops
 
@@ -79,7 +77,6 @@ reopen your original Set as appropriate.
 - **Vocal routing requires review:** inspect the named output bus. This preview
   refuses to guess whether a shared parallel bus belongs to lead or backing.
 - **Restore pending:** stop/cancel Live's render and close its modal dialogs, then
-  click **Restore working Set**. Do not save pending temporary changes.
-- **Live crashed:** reopen the saved working `.als` or original `.als`; the on-disk
-  working copy was saved before temporary changes. Already exported files remain.
-
+  click **Restore Set**. Do not save pending temporary changes.
+- **Live crashed:** use Live recovery or your own saved project. AbleBounce does
+  not create a project backup. Already exported files remain.

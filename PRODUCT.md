@@ -1,9 +1,9 @@
-# AbleBounce 0.1.3
+# AbleBounce 0.1.4
 
 Plain Windows prototype for Ableton Live 12.4.x, with an English UI in both
 applications. Standard WPF controls provide Install, Connect and Calibrate,
 track-role assignment, nine selectable export variants, bit depth, output folder,
-Export selected, Cancel & restore, Restore working Set and Activity.
+Export selected, Cancel & restore, Restore Set and Activity.
 
 The nine variants are full mix; instrumental; instrumental without Main devices;
 full mix without Main devices; backing mix without Main devices; backing mix;
@@ -26,11 +26,11 @@ and Main Effects Off, plus sample rate and render start/length including tails i
 Live. These switches are not changed or verified by AbleBounce. WAV structure and
 format validation cannot establish the musical correctness of an export.
 
-Create a unique sibling working .als with Live Save As before bridge mutation.
-Restore the working Set after each job and cancellation; restoration waits for
-rendering and modal dialogs to stop. Leave the original untouched. Unsupported
+Export directly from the open Set without Save/Save As or project copies.
+Restore the current Set after each job and cancellation; restoration waits for
+rendering and modal dialogs to stop. Do not save temporary changes. Unsupported
 routing, frozen dry vocals and unwritable parameters fail preflight.
 
-The 0.1.2 Windows Save-dialog fix and real Windows dialog tests remain in 0.1.3.
+The 0.1.2 Windows Save-dialog fix and real Windows dialog tests remain in 0.1.4.
 The app has not been tested end to end in a licensed Live 12.4.x installation.
 Build, bridge-unit-test and demo results do not establish Live compatibility.
