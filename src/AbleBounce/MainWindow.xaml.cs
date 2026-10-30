@@ -76,7 +76,7 @@ public partial class MainWindow : Window
         if (session.Protocol != 1) throw new InvalidOperationException("Bridge protocol mismatch. Install the bridge included with this version.");
         if (!LiveCompatibility.IsSupported(session.Version)) throw new InvalidOperationException($"Live {session.Version} is outside the supported 12.4.x branch. Use any Live 12.4 patch release.");
         _session = session;
-        if (session.BridgeVersion < 4)
+        if (session.BridgeVersion < 5)
             _vm.AddLog("Bridge update required: install the bundled bridge and restart Live after restoring pending changes.");
         var saved = string.IsNullOrWhiteSpace(session.Path) ? null : Storage.Read<Dictionary<string, SavedRole>>(RoleFile(session.Path));
         _vm.Tracks.Clear();
@@ -204,9 +204,9 @@ public partial class MainWindow : Window
             _vm.Busy = true;
             var current = await _bridge.Scan();
             _session.BridgeVersion = current.BridgeVersion;
-            if (current.BridgeVersion < 4)
+            if (current.BridgeVersion < 5)
             {
-                MessageBox.Show(this, $"Live is running bridge version {current.BridgeVersion}; version 4 or later is required. Install the bundled bridge in the actual User Library, restart Live, then Connect.", "Bridge update required"); return;
+                MessageBox.Show(this, $"Live is running bridge version {current.BridgeVersion}; version 5 or later is required. Install the bundled bridge in the actual User Library, restart Live, then Connect.", "Bridge update required"); return;
             }
         }
         catch (Exception ex) { ShowError(ex); return; }

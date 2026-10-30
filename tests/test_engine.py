@@ -188,6 +188,19 @@ class EngineTests(unittest.TestCase):
         self.assertIsNone(self.engine.transaction)
         self.begin([1])
 
+    def test_duplicate_dry_names_render_separately_without_renaming(self):
+        self.song.tracks[0].name = self.song.tracks[4].name = "FILLS"
+        before = self.snapshot()
+        token = self.engine.begin([9], self.roles, ["t:0", "t:4"])["transaction"]
+        for key, audible, muted in [("t:0", 0, 4), ("t:4", 4, 0)]:
+            result = self.engine.prepare(9, token, key)
+            self.assertEqual(result["source"], "Main")
+            self.assertFalse(self.song.tracks[audible].mute)
+            self.assertTrue(self.song.tracks[muted].mute)
+            self.engine.restore(final=False)
+            self.assertEqual(before, self.snapshot())
+        self.engine.restore()
+
     def test_all_nine_restore_to_exact_baseline(self):
         original = self.snapshot()
         token = self.begin()

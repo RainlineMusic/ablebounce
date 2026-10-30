@@ -163,7 +163,7 @@ class Engine:
                 "devices": [d.name for d in t.devices],
             })
         app = self.application
-        return {"protocol": 1, "bridge_version": 4, "version": "%s.%s.%s" % (
+        return {"protocol": 1, "bridge_version": 5, "version": "%s.%s.%s" % (
             app.get_major_version(), app.get_minor_version(), app.get_bugfix_version()),
             "path": self.song.file_path, "name": self.song.name,
             "tracks": output, "loop_start": self.song.loop_start,
@@ -223,13 +223,6 @@ class Engine:
                 raise BounceError("Select at least one Lead track or group.")
             if not self.selected_roots("Lead") and not self.selected_roots("Backing"):
                 raise BounceError("No vocal tracks have been assigned.")
-        if 9 in jobs:
-            names = {}
-            for track in self.all_tracks():
-                key = "".join(c.lower() for c in track.name if c.isalnum())
-                if not key or key in names:
-                    raise BounceError("DRY filenames are ambiguous. Give tracks distinct names before exporting: " + track.name)
-                names[key] = track
         if 9 in jobs:
             dry_tracks = set()
             for t in self.dry_roots():
@@ -393,7 +386,7 @@ class Engine:
             raise BounceError("For DRY export select a group or its children, not both.")
         return roots
 
-    def prepare(self, job, transaction):
+    def prepare(self, job, transaction, dry_track=None):
         self.require_idle()
         if transaction != self.transaction or not self.transaction:
             raise BounceError("Transaction does not match.")
@@ -416,6 +409,10 @@ class Engine:
                 pass  # Never rename Live tracks: native names identify exported files.
             elif job == 9:
                 roots = self.dry_roots()
+                if dry_track is not None:
+                    selected = self.resolve(dry_track)
+                    if selected not in roots: raise BounceError("DRY track is not part of this batch selection.")
+                    roots = [selected]
                 inherited_mute = [t for t in roots if any(p.mute for p in self.ancestors(t))]
                 keep = set()
                 for t in roots:
@@ -435,7 +432,7 @@ class Engine:
             if job not in range(1, 10):
                 raise BounceError("Unknown delivery variant.")
             return {"prepared": job, "transaction": self.transaction,
-                    "source": "All Individual Tracks" if job in (8, 9) else "Main"}
+                    "source": "All Individual Tracks" if job == 8 or (job == 9 and dry_track is None) else "Main"}
         except Exception:
             self.restore(final=False)
             raise
@@ -500,7 +497,7 @@ class Engine:
         if method == "begin":
             return self.begin(arguments["jobs"], arguments["roles"], arguments.get("dry_keys"))
         if method == "prepare":
-            return self.prepare(int(arguments["job"]), arguments["transaction"])
+            return self.prepare(int(arguments["job"]), arguments["transaction"], arguments.get("dry_track"))
         if method == "restore":
             self.require_idle()
             if arguments.get("transaction") != self.transaction:

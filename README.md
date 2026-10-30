@@ -1,4 +1,10 @@
-# glucose 0.2.4
+# glucose 0.2.5
+
+Duplicate names are supported without renaming Live tracks. Exported stem files
+receive automatic numbers. Selected DRY tracks render one at a time and receive
+their project track number and original name in `Multitrack/Dry Tracks`.
+Install bridge version 5 and restart Live after restoring any pending changes.
+
 
 Multitrack / Stems accepts duplicate track names and preserves Live's native
 export filenames in `Multitrack/Stems` (with the requested song-title prefix).

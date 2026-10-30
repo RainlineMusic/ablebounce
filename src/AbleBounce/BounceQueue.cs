@@ -35,17 +35,20 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
         try
         {
             Storage.Write("last-session.json", new { source = source.Path, output = root, transaction = _transaction, state = "running" });
-            for (int i = 0; i < jobs.Length; i++)
+            var passes = jobs.SelectMany(job => job == 9
+                ? dry_keys.Select(key => (Job: job, DryKey: (string?)key))
+                : new[] { (Job: job, DryKey: (string?)null) }).ToArray();
+            for (int i = 0; i < passes.Length; i++)
             {
                 ct.ThrowIfCancellationRequested();
-                int job = jobs[i]; jobState(job, "Preparing");
-                report($"Preparing {i + 1}/{jobs.Length}: {FileNames[job].Replace('_', ' ')}");
-                await bridge.Call("prepare", new { job, transaction = _transaction }, ct, timeoutSeconds: 30);
-                var staging = Path.Combine(root, "Staging", job.ToString("D2"));
+                int job = passes[i].Job; var dryTrack = passes[i].DryKey; jobState(job, "Preparing");
+                report($"Preparing {i + 1}/{passes.Length}: {FileNames[job].Replace('_', ' ')}");
+                await bridge.Call("prepare", new { job, dry_track = dryTrack, transaction = _transaction }, ct, timeoutSeconds: 30);
+                var staging = Path.Combine(root, "Staging", job.ToString("D2"), i.ToString("D3"));
                 Directory.CreateDirectory(staging);
                 jobState(job, "Rendering");
-                int expectedFiles = job is 8 or 9 ? source.Tracks.Count(t => t.Audio) : 1;
-                var files = await _driver.Render(job, bits, staging, expectedFiles, report, ct);
+                int expectedFiles = job == 8 ? source.Tracks.Count(t => t.Audio) : 1;
+                var files = await _driver.Render(job == 9 ? 1 : job, bits, staging, expectedFiles, report, ct);
                 foreach (var f in files)
                 {
                     var wave = WaveFile.Inspect(f, bits);
@@ -53,14 +56,14 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
                     else if (range.Frames != wave.Frames || range.SampleRate != wave.SampleRate || range.Bits != wave.Bits)
                         throw new IOException("The export range or sample rate changed between variants. The partial batch was kept for inspection.");
                 }
-                var finalFiles = Deliver(job, files, root, source, title, dry_keys);
+                var finalFiles = Deliver(job, files, root, source, title, dryTrack == null ? dry_keys : [dryTrack]);
                 delivered.Add(new { variant = job, name = FileNames[job], files = finalFiles.Select(f => Path.GetRelativePath(root, f)).ToArray(),
                     frames = range!.Frames, sample_rate = range.SampleRate });
                 await bridge.Call("restore", new { transaction = _transaction, final = false }, ct);
-                jobState(job, "Done");
+                jobState(job, i + 1 < passes.Length && passes[i + 1].Job == job ? "Rendering" : "Done");
                 File.WriteAllText(Path.Combine(root, "manifest.json"), JsonSerializer.Serialize(new
                 {
-                    application = "glucose 0.2.4", live_version = source.Version, source_set = source.Path, track_title = title,
+                    application = "glucose 0.2.5", live_version = source.Version, source_set = source.Path, track_title = title,
                     bit_depth = range!.Bits, roles,
                     range = "Reused Live Export dialog start/length; sample rate set in Live", deliveries = delivered,
                     multitrack_note = "Tracks are pre-parent-bus, post-fader. Groups/Returns are alternatives; do not sum every group with all its children.",
@@ -119,17 +122,29 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
     {
         var result = new List<string>();
         var staging = Path.GetDirectoryName(files[0])!;
+        if (job == 9)
+        {
+            var track = source.Tracks.Single(t => t.Key == dryKeys.Single());
+            int ordinal = source.Tracks.Where(t => !t.Return && !t.Master).Select(t => t.Key).ToList().IndexOf(track.Key) + 1;
+            var folder = Path.Combine(root, "Multitrack", "Dry Tracks");
+            Directory.CreateDirectory(folder);
+            var target = Path.Combine(folder, $"{title}_{ordinal:D3}_{Storage.SafeName(track.Name)}.wav");
+            File.Move(files.Single(), target); result.Add(target);
+            Directory.Delete(staging); return result;
+        }
         if (job == 8)
         {
             // Native All Individual Tracks already assigns unique filenames.
             // Preserve those names; repeated track names need no guessed mapping.
             var folder = Path.Combine(root, "Multitrack", "Stems");
             Directory.CreateDirectory(folder);
-            foreach (var file in files)
+            int fileNumber = 0;
+            foreach (var file in files.OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase))
             {
+                fileNumber++;
                 var native = Path.GetFileNameWithoutExtension(file);
                 var suffix = native.StartsWith("glucose", StringComparison.OrdinalIgnoreCase) ? native[7..] : "_" + native;
-                var target = Path.Combine(folder, title + suffix + ".wav");
+                var target = Path.Combine(folder, title + "_" + fileNumber.ToString("D3") + "_" + Storage.SafeName(suffix.TrimStart(' ', '_', '-', '.')) + ".wav");
                 File.Move(file, target); result.Add(target);
             }
             if (!Directory.EnumerateFileSystemEntries(staging).Any()) Directory.Delete(staging);
