@@ -151,10 +151,10 @@ public partial class MainWindow : Window
                 message => Dispatcher.Invoke(() => _vm.AddLog(message)),
                 (id, state) => Dispatcher.Invoke(() => _vm.Deliveries.Single(d => d.Id == id).State = state));
             var source = _session;
-            var roles = Roles(); var bits = _vm.Bits; var output = _vm.Output; var token = _cancellation.Token;
+            var roles = Roles(); var bits = _vm.Bits; var output = _vm.Output; var title = _vm.TrackTitle; var token = _cancellation.Token;
             // UI Automation can block while another application's provider is
             // busy. Keep it off WPF's dispatcher so Cancel remains responsive.
-            finished = await Task.Run(() => queue.Run(source, roles, jobs, bits, output, token));
+            finished = await Task.Run(() => queue.Run(source, roles, jobs, bits, output, token, title));
         }
         catch (OperationCanceledException) { _vm.AddLog("Cancelled. Completed exports have been kept; see activity for restoration status."); }
         catch (Exception ex) { exportError = ex.Message; ShowError(ex); }

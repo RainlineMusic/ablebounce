@@ -100,13 +100,21 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
             Native.Chord(Native.Ctrl, Native.Shift, (ushort)'R');
         await WaitExportDialog(ct);
         report("Export window found. Selecting render source…");
-        await Choose("source", job == 8 ? 1 : 0, ct);
-        if (!Matches(job == 8 ? "source" : "source_main"))
-            throw new InvalidOperationException("Cannot verify the selected render source. Recalibrate Main and All Individual Tracks.");
-        report("Selecting bit depth…");
-        await Choose("bit_depth", bits == 16 ? 0 : bits == 24 ? 1 : 2, ct);
-        if (!Matches(bits == 16 ? "bit_16" : bits == 32 ? "bit_32" : "bit_depth"))
-            throw new InvalidOperationException("Cannot verify the selected bit depth. Recalibrate the export dialog.");
+        var sourceKey = job == 8 ? "source" : "source_main";
+        if (!Matches(sourceKey))
+        {
+            await Choose("source", job == 8 ? 1 : 0, ct);
+            if (!Matches(sourceKey))
+                throw new InvalidOperationException("Cannot verify the selected render source. Recalibrate Main and All Individual Tracks.");
+        }
+        var bitsKey = bits == 16 ? "bit_16" : bits == 32 ? "bit_32" : "bit_depth";
+        if (!Matches(bitsKey))
+        {
+            report("Changing bit depth…");
+            await Choose("bit_depth", bits == 16 ? 0 : bits == 24 ? 1 : 2, ct);
+            if (!Matches(bitsKey))
+                throw new InvalidOperationException("Cannot verify the selected bit depth. Recalibrate the export dialog.");
+        }
         // Fixed export switches are deliberately user-managed. Only source,
         // bit depth and Export are automated and calibrated.
         await Away(ct);

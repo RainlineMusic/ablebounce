@@ -106,6 +106,8 @@ public sealed class ViewModel : Observable
     private bool _connected;
     private bool _exportRunning;
     private string _output = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "glucose Exports");
+    private string _trackTitle = "";
+    public string TrackTitle { get => _trackTitle; set => Set(ref _trackTitle, value); }
     private string _bitDepth = "24-bit";
     private int _completed;
     public ObservableCollection<TrackRow> Tracks { get; } = [];

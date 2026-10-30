@@ -154,6 +154,7 @@ public sealed class CalibrationWindow : Window
     {
         // Capture the six verification states with only three user points.
         // Leave the dialog on Main / 24 bit and never press Export here.
+        await Native.EnsureEnglish(_live.Id, CancellationToken.None);
         await CaptureChoice("source", 1, "source");
         await CaptureChoice("source", 0, "source_main");
         await CaptureChoice("bit_depth", 0, "bit_16");

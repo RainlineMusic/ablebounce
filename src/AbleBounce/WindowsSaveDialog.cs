@@ -108,6 +108,7 @@ public static class WindowsSaveDialog
         if (!GetGUIThreadInfo(thread, ref info) || (info.Focus != field && !IsChild(field, info.Focus)))
             throw new IOException("The verified filename field did not receive focus. No filename was entered.");
         Native.RequireForeground(process);
+        await Native.EnsureEnglish(process, cancellation);
         Native.Chord(Native.Ctrl, (ushort)'A'); Native.Text(path);
         var deadline = DateTime.UtcNow.AddSeconds(3);
         while (!string.Equals(Read(field), path, StringComparison.OrdinalIgnoreCase))

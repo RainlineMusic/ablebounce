@@ -1,4 +1,9 @@
-# glucose 0.1.7
+# glucose 0.1.9
+
+- Track title prefixes the batch folder and delivered WAV filenames; blank uses the Set name.
+- Render source and bit depth are verified on each pass and changed only when different.
+- English input is requested and verified for Live before hotkeys. This changes the input layout, not the Windows display language. Unicode filenames remain supported.
+
 
 Formerly AbleBounce. The executable and download artifacts are now named glucose.
 The Live Control Surface remains **AbleBounce** to preserve existing installations;

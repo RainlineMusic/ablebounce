@@ -77,6 +77,29 @@ internal static class Native
         SetForegroundWindow(live.MainWindowHandle);
         await Task.Delay(350, ct);
         RequireForeground(live.Id);
+        await EnsureEnglish(live.Id, ct);
+    }
+    [DllImport("user32.dll")] private static extern nint GetKeyboardLayout(uint thread);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern nint LoadKeyboardLayout(string name, uint flags);
+    [DllImport("user32.dll", SetLastError = true)] private static extern bool PostMessage(nint window, uint message, nint wParam, nint lParam);
+    public static async Task EnsureEnglish(int process, CancellationToken cancellation)
+    {
+        RequireForeground(process);
+        var window = GetForegroundWindow();
+        var thread = GetWindowThreadProcessId(window, out _);
+        bool English() => ((long)GetKeyboardLayout(thread) & 0x3ff) == 9;
+        if (English()) return;
+        var english = LoadKeyboardLayout("00000409", 0);
+        if (english == 0 || !PostMessage(window, 0x0050, 0, english))
+            throw new InvalidOperationException("Cannot select English input in Live. Select English in Windows and retry.");
+        var deadline = DateTime.UtcNow.AddSeconds(3);
+        while (!English())
+        {
+            cancellation.ThrowIfCancellationRequested(); RequireForeground(process);
+            if (DateTime.UtcNow >= deadline)
+                throw new InvalidOperationException("Live did not switch to English input. Select English in Windows and retry.");
+            await Task.Delay(50, cancellation);
+        }
     }
     private static void Send(params Input[] inputs)
     {

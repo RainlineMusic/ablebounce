@@ -53,7 +53,10 @@
   </Grid>
   <GroupBox Grid.Row="3" Header="Export settings" Margin="0,8,0,0" IsEnabled="{Binding Idle}">
    <Grid Margin="6">
+    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
     <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="110"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+    <TextBlock Grid.Row="1" Text="Track title" VerticalAlignment="Center" Margin="0,8,6,0"/>
+    <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="4" Margin="0,8,0,0" Text="{Binding TrackTitle, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Track title" ToolTip="Used in exported filenames. Leave blank to use the Live Set name."/>
     <TextBlock Text="Bit depth" VerticalAlignment="Center" Margin="0,0,6,0"/>
     <ComboBox Grid.Column="1" ItemsSource="{Binding BitDepths}" SelectedItem="{Binding BitDepth}" AutomationProperties.Name="Export bit depth"/>
     <TextBlock Grid.Column="2" Text="Output folder" VerticalAlignment="Center" Margin="14,0,6,0"/>

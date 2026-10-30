@@ -12,7 +12,7 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
     private static readonly string[] FileNames = ["", "Full_Mix", "Instrumental", "Instrumental_No_Master", "Full_Mix_No_Master",
         "Backing_Mix_No_Master", "Backing_Mix", "Full_Mix_Lead_Minus_6dB", "Multitrack", "Dry_Lead_Vocal"];
 
-    public async Task<string> Run(SessionInfo source, Dictionary<string, string> roles, int[] jobs, int bits, string output, CancellationToken ct)
+    public async Task<string> Run(SessionInfo source, Dictionary<string, string> roles, int[] jobs, int bits, string output, CancellationToken ct, string? trackTitle = null)
     {
         profile.Validate(source);
         var current = await bridge.Scan(ct);
@@ -20,7 +20,9 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
             throw new InvalidOperationException("The Set changed after scanning. Connect again to review its track roles.");
         if (current.Transaction != null) throw new InvalidOperationException("Restore the unfinished current Set before starting a new batch.");
         await bridge.Call("preflight", new { jobs, roles }, ct);
-        var root = Path.Combine(Path.GetFullPath(output), Storage.SafeName(string.IsNullOrWhiteSpace(source.Path) ? source.Name : Path.GetFileNameWithoutExtension(source.Path)) + "_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + "_" + Guid.NewGuid().ToString("N")[..5]);
+        var title = Storage.SafeName(string.IsNullOrWhiteSpace(trackTitle)
+            ? (string.IsNullOrWhiteSpace(source.Path) ? source.Name : Path.GetFileNameWithoutExtension(source.Path)) : trackTitle.Trim());
+        var root = Path.Combine(Path.GetFullPath(output), title + "_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + "_" + Guid.NewGuid().ToString("N")[..5]);
         Directory.CreateDirectory(root);
         report("Exporting from the current open Set. No project files will be saved.");
         var begun = await bridge.Call("begin", new { jobs, roles }, ct);
@@ -49,14 +51,14 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
                     else if (range.Frames != wave.Frames || range.SampleRate != wave.SampleRate)
                         throw new IOException("The export range or sample rate changed between variants. The partial batch was kept for inspection.");
                 }
-                var finalFiles = Deliver(job, files, root, source);
+                var finalFiles = Deliver(job, files, root, source, title);
                 delivered.Add(new { variant = job, name = FileNames[job], files = finalFiles.Select(f => Path.GetRelativePath(root, f)).ToArray(),
                     frames = range!.Frames, sample_rate = range.SampleRate });
                 await bridge.Call("restore", new { transaction = _transaction, final = false }, ct);
                 jobState(job, "Done");
                 File.WriteAllText(Path.Combine(root, "manifest.json"), JsonSerializer.Serialize(new
                 {
-                    application = "glucose 0.1.8", live_version = source.Version, source_set = source.Path,
+                    application = "glucose 0.1.9", live_version = source.Version, source_set = source.Path, track_title = title,
                     bit_depth = bits, roles,
                     range = "Reused Live Export dialog start/length; sample rate set in Live", deliveries = delivered,
                     multitrack_note = "Tracks are pre-parent-bus, post-fader. Groups/Returns are alternatives; do not sum every group with all its children.",
@@ -85,7 +87,7 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
         return root;
     }
 
-    private static List<string> Deliver(int job, List<string> files, string root, SessionInfo source)
+    private static List<string> Deliver(int job, List<string> files, string root, SessionInfo source, string title)
     {
         var result = new List<string>();
         var staging = Path.GetDirectoryName(files[0])!;
@@ -93,7 +95,7 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
         {
             var folder = Path.Combine(root, job == 9 ? "Dry_Vocal" : "Mixes");
             Directory.CreateDirectory(folder);
-            string final = Path.Combine(folder, $"{job:D2}_{FileNames[job]}.wav");
+            string final = Path.Combine(folder, $"{title}_{job:D2}_{FileNames[job]}.wav");
             File.Move(files.Single(), final); result.Add(final);
         }
         else
@@ -115,7 +117,7 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
                 if (!mapped.TryAdd(track.Key, file)) throw new IOException("Duplicate exported track identifier: " + track.Name);
                 var folder = Path.Combine(root, "Multitrack", isReturn ? "Returns" : track.Group ? "Groups" : "Tracks");
                 var number = isReturn ? "R" + (index + 1).ToString("D2") : (index + 1).ToString("D3");
-                pending.Add((file, Path.Combine(folder, number + "_" + Storage.SafeName(track.Name) + ".wav")));
+                pending.Add((file, Path.Combine(folder, title + "_" + number + "_" + Storage.SafeName(track.Name) + ".wav")));
             }
             var missing = source.Tracks.Where(t => t.Audio && !t.Master && !mapped.ContainsKey(t.Key)).Select(t => t.Name).ToArray();
             if (missing.Length > 0 || unlabelled > 1)
