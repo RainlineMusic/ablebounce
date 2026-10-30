@@ -73,10 +73,13 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
         {
             if (w.Current.ClassName == "#32770" && w.Current.IsEnabled && !w.Current.IsOffscreen)
             {
-                var edit = w.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.AutomationIdProperty, "1001"));
-                if (edit != null) return w;
+                // Common Item Dialog host IDs are independent of Windows UI
+                // language. Do not identify arbitrary plug-in login edits by
+                // their generic numeric control ID alone.
+                var host = w.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.AutomationIdProperty, "FileNameControlHost"));
+                if (host != null) return w;
                 // Modern common file dialogs expose a File name combo/edit.
-                edit = w.FindFirst(TreeScope.Descendants, new AndCondition(
+                var edit = w.FindFirst(TreeScope.Descendants, new AndCondition(
                     new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit),
                     new OrCondition(new PropertyCondition(AutomationElement.NameProperty, "File name:"),
                                     new PropertyCondition(AutomationElement.NameProperty, "File name"))));
@@ -85,6 +88,22 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
         }
         return null;
     }
+    private static AutomationElement? FilenameField(AutomationElement dialog)
+    {
+        var host = dialog.FindFirst(TreeScope.Descendants,
+            new PropertyCondition(AutomationElement.AutomationIdProperty, "FileNameControlHost"));
+        if (host != null)
+        {
+            if (host.TryGetCurrentPattern(ValuePattern.Pattern, out _)) return host;
+            var edit = host.FindFirst(TreeScope.Descendants,
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit));
+            if (edit != null) return edit;
+        }
+        return dialog.FindFirst(TreeScope.Descendants, new AndCondition(
+            new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit),
+            new OrCondition(new PropertyCondition(AutomationElement.NameProperty, "File name:"),
+                            new PropertyCondition(AutomationElement.NameProperty, "File name"))));
+    }
     private async Task SaveDialog(string path, CancellationToken ct)
     {
         var end = DateTime.UtcNow.AddSeconds(15);
@@ -92,15 +111,15 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
         while (DateTime.UtcNow < end && dialog == null)
         { ct.ThrowIfCancellationRequested(); Guard(); dialog = FileDialog(Live.Id); if (dialog == null) await Task.Delay(200, ct); }
         if (dialog == null) throw new InvalidOperationException("The Windows Save dialog was not detected. No filename was entered.");
-        Guard(); Native.Chord(Native.Alt, (ushort)'N'); await Task.Delay(100, ct);
-        Guard(); Native.Chord(Native.Ctrl, (ushort)'A'); Native.Text(path);
-        await Task.Delay(150, ct);
-        // Read back the entered path through UIA where possible, never confirm
-        // a different name in an unrelated dialog.
-        var focused = AutomationElement.FocusedElement;
-        if (focused.Current.ProcessId != Live.Id || !focused.TryGetCurrentPattern(ValuePattern.Pattern, out var valuePattern))
+        Guard();
+        var field = FilenameField(dialog);
+        if (field == null || field.Current.ProcessId != Live.Id || !field.TryGetCurrentPattern(ValuePattern.Pattern, out var valuePattern))
             throw new InvalidOperationException("Cannot verify the Save dialog filename. Leave Live open and retry.");
-        var entered = ((ValuePattern)valuePattern).Current.Value;
+        var value = (ValuePattern)valuePattern;
+        if (value.Current.IsReadOnly) throw new InvalidOperationException("The Save dialog filename field is read-only.");
+        field.SetFocus(); value.SetValue(path);
+        await Task.Delay(150, ct);
+        var entered = value.Current.Value;
         if (!string.Equals(entered, path, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Save dialog filename readback did not match.");
         Guard(); Native.Key(Native.Enter);
