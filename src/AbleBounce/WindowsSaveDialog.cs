@@ -53,7 +53,7 @@ public static class WindowsSaveDialog
         return null;
     }
 
-    public static void Submit(AutomationElement dialog, int process, string path)
+    public static async Task Submit(AutomationElement dialog, int process, string path, CancellationToken cancellation = default)
     {
         if (!Path.IsPathFullyQualified(path)) throw new IOException("A full Save path is required.");
         if (File.Exists(path)) throw new IOException("Refusing to overwrite an existing file: " + path);
@@ -63,10 +63,25 @@ public static class WindowsSaveDialog
             throw new IOException("Windows did not expose an editable filename field. No filename was entered.");
         var value = (ValuePattern)pattern;
         if (value.Current.IsReadOnly) throw new IOException("The Save filename field is read-only.");
+        // Some common-dialog providers report SetValue successfully while
+        // leaving the shell's actual filename unchanged. Real edit events are
+        // required; send them only to the verified focused file-name field.
         field.SetFocus();
-        value.SetValue(path);
+        await Task.Delay(80, cancellation);
+        Native.RequireForeground(process);
+        if (!field.Current.HasKeyboardFocus) throw new IOException("The filename field did not receive keyboard focus.");
+        Native.Chord(Native.Ctrl, (ushort)'A');
+        Native.Text(path);
+        var deadline = DateTime.UtcNow.AddSeconds(3);
+        while (!string.Equals(value.Current.Value, path, StringComparison.OrdinalIgnoreCase) && DateTime.UtcNow < deadline)
+        {
+            cancellation.ThrowIfCancellationRequested();
+            Native.RequireForeground(process);
+            await Task.Delay(50, cancellation);
+        }
         if (!string.Equals(value.Current.Value, path, StringComparison.OrdinalIgnoreCase))
             throw new IOException("The Save filename readback did not match.");
+        Native.RequireForeground(process);
         var save = ById(dialog, "1", ControlType.Button);
         if (save == null || !save.Current.IsEnabled || !save.TryGetCurrentPattern(InvokePattern.Pattern, out var invoke))
             throw new IOException("The Windows Save button is unavailable.");

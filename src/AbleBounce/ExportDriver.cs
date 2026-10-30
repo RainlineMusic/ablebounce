@@ -74,7 +74,7 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
         { ct.ThrowIfCancellationRequested(); Guard(); dialog = FileDialog(Live.Id); if (dialog == null) await Task.Delay(200, ct); }
         if (dialog == null) throw new InvalidOperationException("The Windows Save dialog was not detected. No filename was entered.");
         Guard();
-        WindowsSaveDialog.Submit(dialog, Live.Id, path);
+        await WindowsSaveDialog.Submit(dialog, Live.Id, path, ct);
     }
     public async Task<string> CreateWorkingCopy(SessionInfo session, CancellationToken ct)
     {

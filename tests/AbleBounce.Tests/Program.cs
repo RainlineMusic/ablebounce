@@ -59,9 +59,9 @@ try
         { dialog = WindowsSaveDialog.Find(process); if (dialog == null) await Task.Delay(100); }
         Check(dialog != null, "Native Windows Save dialog was not recognised");
         var sentinel = Path.Combine(directory, "existing.als"); File.WriteAllText(sentinel, "original");
-        Reject(() => WindowsSaveDialog.Submit(dialog!, process, sentinel), "Save helper accepted an overwrite");
+        Reject(() => WindowsSaveDialog.Submit(dialog!, process, sentinel).GetAwaiter().GetResult(), "Save helper accepted an overwrite");
         Check(File.ReadAllText(sentinel) == "original", "Existing source was modified");
-        WindowsSaveDialog.Submit(dialog!, process, expected);
+        await WindowsSaveDialog.Submit(dialog!, process, expected);
         var selected = await finished.Task.WaitAsync(TimeSpan.FromSeconds(20));
         Check(string.Equals(selected, expected, StringComparison.OrdinalIgnoreCase), $"Native Save path did not match. Expected: {expected}; selected: {selected}");
     }
