@@ -65,6 +65,19 @@ public static class WindowsSaveDialog
         EnumWindows((window, _) => { if (Verified(window, process)) { found = window; count++; } return true; }, 0);
         return count == 1 ? found : 0;
     }
+    public static string Describe(int process)
+    {
+        var lines = new List<string>();
+        EnumWindows((window, _) =>
+        {
+            Native.GetWindowThreadProcessId(window, out var owner);
+            if (owner != process || !IsWindowVisible(window)) return true;
+            lines.Add("Window " + Class(window));
+            EnumChildWindows(window, (child, _) => { lines.Add($"  {Class(child)} id={GetDlgCtrlID(child)} visible={IsWindowVisible(child)}"); return true; }, 0);
+            return true;
+        }, 0);
+        return string.Join("\n", lines);
+    }
     private static string Read(nint edit)
     {
         var buffer = new StringBuilder(32768);
