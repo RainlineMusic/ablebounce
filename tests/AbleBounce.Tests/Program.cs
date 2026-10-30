@@ -83,11 +83,11 @@ try
         }) { IsBackground = true };
         thread.SetApartmentState(ApartmentState.STA); thread.Start();
         var process = Environment.ProcessId;
-        AutomationElement? dialog = null;
+        nint dialog = 0;
         var deadline = DateTime.UtcNow.AddSeconds(20);
-        while (DateTime.UtcNow < deadline && dialog == null && !finished.Task.IsCompleted)
-        { dialog = WindowsSaveDialog.Find(process); if (dialog == null) await Task.Delay(100); }
-        Check(dialog != null, "Native Windows Save dialog was not recognised");
+        while (DateTime.UtcNow < deadline && dialog == 0 && !finished.Task.IsCompleted)
+        { dialog = WindowsSaveDialog.Find(process); if (dialog == 0) await Task.Delay(100); }
+        Check(dialog != 0, "Native Windows Save dialog was not recognised");
         var sentinel = Path.Combine(directory, "existing.als"); File.WriteAllText(sentinel, "original");
         Reject(() => WindowsSaveDialog.Submit(dialog!, process, sentinel).GetAwaiter().GetResult(), "Save helper accepted an overwrite");
         Check(File.ReadAllText(sentinel) == "original", "Existing source was modified");

@@ -1,91 +1,106 @@
 using System.IO;
-using System.Windows.Automation;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace AbleBounce;
 
-// Windows common file dialogs: use their control IDs, not translated labels.
-// Filename IDs are cmb13/edt1; Save/Open is IDOK and file type is cmb1.
+// Deliberately avoid UI Automation: shell/OneDrive providers can block its
+// descendant traversal indefinitely. Only verified Win32 common dialogs accept input.
 public static class WindowsSaveDialog
 {
-    private static AutomationElement? ById(AutomationElement parent, string id, ControlType? type = null) =>
-        parent.FindFirst(TreeScope.Descendants, type == null
-            ? new PropertyCondition(AutomationElement.AutomationIdProperty, id)
-            : new AndCondition(new PropertyCondition(AutomationElement.AutomationIdProperty, id),
-                new PropertyCondition(AutomationElement.ControlTypeProperty, type)));
-
-    private static AutomationElement? Editable(AutomationElement? host)
+    private delegate bool Callback(nint window, nint parameter);
+    [DllImport("user32.dll")] private static extern bool EnumWindows(Callback callback, nint parameter);
+    [DllImport("user32.dll")] private static extern bool EnumChildWindows(nint parent, Callback callback, nint parameter);
+    [DllImport("user32.dll")] private static extern int GetDlgCtrlID(nint window);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassName(nint window, StringBuilder name, int count);
+    [DllImport("user32.dll")] private static extern bool IsWindowVisible(nint window);
+    [DllImport("user32.dll")] private static extern bool IsWindowEnabled(nint window);
+    [DllImport("user32.dll")] private static extern bool IsChild(nint parent, nint child);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern nint SendMessageTimeout(nint window, uint message, nint wParam, StringBuilder buffer, uint flags, uint timeout, out nint result);
+    [StructLayout(LayoutKind.Sequential)] private struct GuiInfo
     {
-        if (host == null) return null;
-        if (host.Current.ControlType == ControlType.Edit) return host;
-        var edit = host.FindFirst(TreeScope.Descendants,
-            new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit));
-        return edit ?? (host.TryGetCurrentPattern(ValuePattern.Pattern, out _) ? host : null);
+        public uint Size, Flags;
+        public nint Active, Focus, Capture, MenuOwner, MoveSize, Caret;
+        public Native.Rect CaretRect;
     }
-
-    private static AutomationElement? Filename(AutomationElement dialog)
+    [DllImport("user32.dll")] private static extern bool GetGUIThreadInfo(uint thread, ref GuiInfo info);
+    private static string Class(nint window)
+    { var name = new StringBuilder(128); GetClassName(window, name, name.Capacity); return name.ToString(); }
+    private static nint Child(nint parent, int id, string className)
     {
-        var modern = Editable(ById(dialog, "FileNameControlHost"));
-        if (modern != null) return modern;
-        // Numeric edit IDs occur in other dialogs too. Require the file-type
-        // selector before accepting a legacy filename combo/edit.
-        if (ById(dialog, "FileTypeControlHost") != null || ById(dialog, "1136", ControlType.ComboBox) != null)
-            return Editable(ById(dialog, "1148", ControlType.ComboBox))
-                ?? ById(dialog, "1152", ControlType.Edit)
-                ?? ById(dialog, "1001", ControlType.Edit);
-        return null;
-    }
-
-    private static bool IsFileDialog(AutomationElement window, int process) =>
-        window.Current.ProcessId == process && window.Current.ClassName == "#32770"
-        && window.Current.IsEnabled && !window.Current.IsOffscreen
-        && ById(window, "1", ControlType.Button) != null
-        && Filename(window) != null;
-
-    public static AutomationElement? Find(int process)
-    {
-        var windows = AutomationElement.RootElement.FindAll(TreeScope.Children,
-            new PropertyCondition(AutomationElement.ProcessIdProperty, process));
-        foreach (AutomationElement window in windows)
+        nint found = 0;
+        EnumChildWindows(parent, (window, _) =>
         {
-            try { if (IsFileDialog(window, process)) return window; }
-            catch (ElementNotAvailableException) { } // dialog closed during enumeration
-        }
-        return null;
+            if (GetDlgCtrlID(window) == id && Class(window) == className && IsWindowVisible(window))
+            { found = window; return false; }
+            return true;
+        }, 0);
+        return found;
     }
-
-    public static async Task Submit(AutomationElement dialog, int process, string path, CancellationToken cancellation = default)
+    private static nint Filename(nint dialog)
+    {
+        var combo = Child(dialog, 1148, "ComboBox");
+        if (combo != 0)
+        {
+            nint edit = 0;
+            EnumChildWindows(combo, (window, _) => { if (Class(window) == "Edit") { edit = window; return false; } return true; }, 0);
+            if (edit != 0) return edit;
+        }
+        // edt1 is the documented legacy filename control. Require the file type
+        // combo before accepting a numeric edit ID in any dialog.
+        if (Child(dialog, 1136, "ComboBox") != 0) return Child(dialog, 1152, "Edit");
+        return 0;
+    }
+    private static bool Verified(nint dialog, int process)
+    {
+        Native.GetWindowThreadProcessId(dialog, out var owner);
+        return dialog != 0 && owner == process && Class(dialog) == "#32770"
+            && IsWindowVisible(dialog) && IsWindowEnabled(dialog)
+            && Child(dialog, 1, "Button") != 0 && Filename(dialog) != 0;
+    }
+    public static nint Find(int process)
+    {
+        nint found = 0; int count = 0;
+        EnumWindows((window, _) => { if (Verified(window, process)) { found = window; count++; } return true; }, 0);
+        return count == 1 ? found : 0;
+    }
+    private static string Read(nint edit)
+    {
+        var buffer = new StringBuilder(32768);
+        if (SendMessageTimeout(edit, 0x000D, buffer.Capacity, buffer, 2, 500, out _) == 0)
+            throw new IOException("The Windows filename field did not respond within 500 ms.");
+        return buffer.ToString();
+    }
+    public static async Task Submit(nint dialog, int process, string path, CancellationToken cancellation = default)
     {
         if (!Path.IsPathFullyQualified(path)) throw new IOException("A full Save path is required.");
         if (File.Exists(path)) throw new IOException("Refusing to overwrite an existing file: " + path);
-        if (!IsFileDialog(dialog, process)) throw new IOException("The verified Windows file dialog is no longer available.");
-        var field = Filename(dialog)!;
-        if (field.Current.ProcessId != process || !field.TryGetCurrentPattern(ValuePattern.Pattern, out var pattern))
-            throw new IOException("Windows did not expose an editable filename field. No filename was entered.");
-        var value = (ValuePattern)pattern;
-        if (value.Current.IsReadOnly) throw new IOException("The Save filename field is read-only.");
-        // Some common-dialog providers report SetValue successfully while
-        // leaving the shell's actual filename unchanged. Real edit events are
-        // required; send them only to the verified focused file-name field.
-        field.SetFocus();
-        await Task.Delay(80, cancellation);
+        if (!Verified(dialog, process)) throw new IOException("The verified Windows Save dialog is unavailable.");
+        var field = Filename(dialog);
+        Native.SetForegroundWindow(dialog);
         Native.RequireForeground(process);
-        if (!field.Current.HasKeyboardFocus) throw new IOException("The filename field did not receive keyboard focus.");
-        Native.Chord(Native.Ctrl, (ushort)'A');
-        Native.Text(path);
+        if (!Native.GetWindowRect(field, out var rect)) throw new IOException("Cannot locate the filename field.");
+        Native.Click(rect.Left + rect.Width / 2, rect.Top + rect.Height / 2);
+        await Task.Delay(120, cancellation);
+        var thread = Native.GetWindowThreadProcessId(dialog, out _);
+        var info = new GuiInfo { Size = (uint)Marshal.SizeOf<GuiInfo>() };
+        if (!GetGUIThreadInfo(thread, ref info) || (info.Focus != field && !IsChild(field, info.Focus)))
+            throw new IOException("The verified filename field did not receive focus. No filename was entered.");
+        Native.RequireForeground(process);
+        Native.Chord(Native.Ctrl, (ushort)'A'); Native.Text(path);
         var deadline = DateTime.UtcNow.AddSeconds(3);
-        while (!string.Equals(value.Current.Value, path, StringComparison.OrdinalIgnoreCase) && DateTime.UtcNow < deadline)
+        while (!string.Equals(Read(field), path, StringComparison.OrdinalIgnoreCase))
         {
-            cancellation.ThrowIfCancellationRequested();
-            Native.RequireForeground(process);
-            await Task.Delay(50, cancellation);
+            cancellation.ThrowIfCancellationRequested(); Native.RequireForeground(process);
+            if (DateTime.UtcNow >= deadline) throw new IOException("The Save filename readback did not match.");
+            await Task.Delay(60, cancellation);
         }
-        if (!string.Equals(value.Current.Value, path, StringComparison.OrdinalIgnoreCase))
-            throw new IOException("The Save filename readback did not match.");
+        cancellation.ThrowIfCancellationRequested();
+        if (File.Exists(path)) throw new IOException("Refusing to overwrite an existing file: " + path);
         Native.RequireForeground(process);
-        var save = ById(dialog, "1", ControlType.Button);
-        if (save == null || !save.Current.IsEnabled || !save.TryGetCurrentPattern(InvokePattern.Pattern, out var invoke))
-            throw new IOException("The Windows Save button is unavailable.");
-        save.SetFocus(); // Commit the edit before invoking the default action.
-        ((InvokePattern)invoke).Invoke();
+        // Enter commits the real edit and invokes Save asynchronously. Never
+        // synchronously invoke a shell button while Live may be rendering.
+        Native.Key(Native.Enter);
     }
 }

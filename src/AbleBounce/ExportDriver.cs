@@ -79,14 +79,14 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
         }
         throw new InvalidOperationException("Export Audio/Video did not match the calibrated dialog. Close other dialogs and recalibrate.");
     }
-    private static AutomationElement? FileDialog(int process) => WindowsSaveDialog.Find(process);
+    private static nint FileDialog(int process) => WindowsSaveDialog.Find(process);
     private async Task SaveDialog(string path, CancellationToken ct)
     {
         var end = DateTime.UtcNow.AddSeconds(15);
-        AutomationElement? dialog = null;
-        while (DateTime.UtcNow < end && dialog == null)
-        { ct.ThrowIfCancellationRequested(); Guard(); dialog = FileDialog(Live.Id); if (dialog == null) await Task.Delay(200, ct); }
-        if (dialog == null) throw new InvalidOperationException("The Windows Save dialog was not detected. No filename was entered.");
+        nint dialog = 0;
+        while (DateTime.UtcNow < end && dialog == 0)
+        { ct.ThrowIfCancellationRequested(); Guard(); dialog = FileDialog(Live.Id); if (dialog == 0) await Task.Delay(200, ct); }
+        if (dialog == 0) throw new InvalidOperationException("The Windows Save dialog was not detected. No filename was entered.");
         Guard();
         await WindowsSaveDialog.Submit(dialog, Live.Id, path, ct);
     }
@@ -125,7 +125,7 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
             // Do not require focus during an uninterrupted render. No UI input
             // is sent until focus and process identity have been verified again.
             var files = Directory.GetFiles(directory, "*.wav").ToList();
-            if (files.Count < expectedFiles || FileDialog(Live.Id) != null) continue;
+            if (files.Count < expectedFiles || FileDialog(Live.Id) != 0) continue;
             try
             {
                 foreach (var file in files) WaveFile.Inspect(file, bits, exclusive: true);
