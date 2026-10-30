@@ -1,4 +1,13 @@
-# glucose 0.2.0
+# glucose 0.2.1
+
+Export variants in order: Master, Mix, Instrumental Master, Instrumental Mix,
+Backing Master, Backing Mix, Multitrack / Stems, Selected Tracks (Dry).
+The lead -6 dB variant has been removed from the application.
+
+Mix WAV filenames are exactly `name_MASTER.wav`, `name_MIX.wav`,
+`name_INSTR_MASTER.wav`, `name_INSTR_MIX.wav`, `name_BACK_MASTER.wav`,
+`name_BACK_MIX.wav`. `name` comes from Track title or the Live Set name.
+
 
 - Calibrate minimizes glucose, brings Live forward and opens Export Audio/Video.
 - Automatic calibration supports the known tall Live 12.4 English dialog layout. It tests the source chooser and the Export button (opens/cancels the filename dialog without rendering). Unsupported layouts or failed verification fall back to two F8 points: Rendered Track text and Export.

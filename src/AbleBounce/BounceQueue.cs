@@ -9,8 +9,8 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
     private readonly ExportDriver _driver = new(profile, bridge);
     private string? _transaction;
     public bool NeedsRestore => _transaction != null;
-    private static readonly string[] FileNames = ["", "Full_Mix", "Instrumental", "Instrumental_No_Master", "Full_Mix_No_Master",
-        "Backing_Mix_No_Master", "Backing_Mix", "Full_Mix_Lead_Minus_6dB", "Multitrack", "Selected_Tracks_DRY"];
+    private static readonly string[] FileNames = ["", "MASTER", "INSTR_MASTER", "INSTR_MIX", "MIX",
+        "BACK_MIX", "BACK_MASTER", "", "Multitrack", "Selected_Tracks_DRY"];
 
     public async Task<string> Run(SessionInfo source, Dictionary<string, string> roles, int[] jobs, int bits, string output, CancellationToken ct, string? trackTitle = null, string[]? dryKeys = null)
     {
@@ -60,11 +60,11 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
                 jobState(job, "Done");
                 File.WriteAllText(Path.Combine(root, "manifest.json"), JsonSerializer.Serialize(new
                 {
-                    application = "glucose 0.2.0", live_version = source.Version, source_set = source.Path, track_title = title,
+                    application = "glucose 0.2.1", live_version = source.Version, source_set = source.Path, track_title = title,
                     bit_depth = range!.Bits, roles,
                     range = "Reused Live Export dialog start/length; sample rate set in Live", deliveries = delivered,
                     multitrack_note = "Tracks are pre-parent-bus, post-fader. Groups/Returns are alternatives; do not sum every group with all its children.",
-                    lead_trim_note = "A final Utility trims each selected lead root by -6 dB, including its own sends; descendant sends bypassing a selected group retain their original level."
+                    dry_note = "Selected dry tracks bypass audio effects, sends, parent and master processing."
                 }, Storage.Json));
             }
         }
@@ -97,7 +97,7 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
         {
             var folder = Path.Combine(root, job == 9 ? "Dry_Vocal" : "Mixes");
             Directory.CreateDirectory(folder);
-            string final = Path.Combine(folder, $"{title}_{job:D2}_{FileNames[job]}.wav");
+            string final = Path.Combine(folder, $"{title}_{FileNames[job]}.wav");
             File.Move(files.Single(), final); result.Add(final);
         }
         else

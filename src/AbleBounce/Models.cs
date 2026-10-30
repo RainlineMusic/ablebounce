@@ -89,15 +89,14 @@ public sealed class DeliveryRow : Observable
     { Id = id; Title = title; Description = description; Vocals = vocals; Master = master; }
     public static DeliveryRow[] Create() =>
     [
-        new(1, "Full mix", "Your original mix, with its current master chain.", "All vocals", "Original"),
-        new(2, "Instrumental", "Lead and backing vocals removed.", "No vocals", "Original"),
-        new(3, "Instrumental · no master", "No vocals and no master devices.", "No vocals", "Bypassed"),
-        new(4, "Full mix · no master", "The complete mix before master processing.", "All vocals", "Bypassed"),
-        new(5, "Backing mix · no master", "Backing vocals stay; lead vocals are removed.", "Backing", "Bypassed"),
-        new(6, "Backing mix", "Backing vocals with the original master chain.", "Backing", "Original"),
-        new(7, "Full mix · lead −6 dB", "Temporary final Utility trim; fader automation stays.", "Lead −6 dB", "Original"),
-        new(8, "Mixed multitrack", "Post-fader tracks, groups and returns in separate folders.", "All tracks", "Excluded"),
-        new(9, "Selected tracks (DRY)", "Checked tracks without audio effects, sends, parent or master processing.", "Selected", "Bypassed"),
+        new(1, "Master", "Full mix with the current master processing.", "All vocals", "Original"),
+        new(4, "Mix", "Full mix without master processing.", "All vocals", "Bypassed"),
+        new(2, "Instrumental Master", "No lead or backing vocals; master processing retained.", "No vocals", "Original"),
+        new(3, "Instrumental Mix", "No lead or backing vocals; no master processing.", "No vocals", "Bypassed"),
+        new(6, "Backing Master", "Backing vocals retained, lead removed; master processing retained.", "Backing", "Original"),
+        new(5, "Backing Mix", "Backing vocals retained, lead removed; no master processing.", "Backing", "Bypassed"),
+        new(8, "Multitrack / Stems", "Post-fader tracks, groups and returns in separate folders.", "All tracks", "Excluded"),
+        new(9, "Selected Tracks (Dry)", "Checked tracks without audio effects, sends, parent or master processing.", "Selected", "Bypassed"),
     ];
 }
 
