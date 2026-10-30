@@ -198,9 +198,10 @@ class Engine:
                 if pr in ("Lead", "Backing", "Instrument") and own not in (pr, "Inherit", "Unassigned"):
                     raise BounceError("Conflicting roles in group %s. Assign its children instead." % p.name)
 
-    def preflight(self, jobs, roles):
+    def preflight(self, jobs, roles, dry_keys=None):
         self.require_idle()
         self.roles = dict(roles)
+        self.dry_keys = dry_keys
         self.validate_roles()
         if self.song.is_playing or getattr(self.song, "record_mode", False):
             raise BounceError("Stop playback and recording before exporting.")
@@ -212,24 +213,24 @@ class Engine:
             raise BounceError("Clear existing Solo states before exporting; muted tracks are preserved.")
         if not jobs or any(j not in range(1, 10) for j in jobs):
             raise BounceError("Choose at least one valid delivery variant.")
-        vocal_jobs = any(j in (2, 3, 5, 6, 7, 9) for j in jobs)
+        vocal_jobs = any(j in (2, 3, 5, 6, 7) for j in jobs)
         if vocal_jobs:
             unknown = [t.name for t in self.tracks() if not t.is_foldable
                        and t.has_audio_output and self.effective_role(t) == "Unassigned"]
             if unknown:
                 raise BounceError("Assign roles to: " + ", ".join(unknown[:12]))
-            if not self.selected_roots("Lead") and any(j in (5, 6, 7, 9) for j in jobs):
+            if not self.selected_roots("Lead") and any(j in (5, 6, 7) for j in jobs):
                 raise BounceError("Select at least one Lead track or group.")
             if not self.selected_roots("Lead") and not self.selected_roots("Backing"):
                 raise BounceError("No vocal tracks have been assigned.")
         if 9 in jobs:
             dry_tracks = set()
-            for t in self.selected_roots("Lead"):
+            for t in self.dry_roots():
                 dry_tracks.update([t] + self.descendants(t))
                 self.main_routing(t)  # establish that dry roots can bypass parent effects
             frozen = [t.name for t in dry_tracks if getattr(t, "is_frozen", False)]
             if frozen:
-                raise BounceError("Unfreeze these dry-vocal tracks in Live first: " + ", ".join(frozen))
+                raise BounceError("Unfreeze these selected dry tracks in Live first: " + ", ".join(frozen))
         if 7 in jobs:
             frozen = [t.name for t in self.selected_roots("Lead") if getattr(t, "is_frozen", False)]
             if frozen:
@@ -268,10 +269,10 @@ class Engine:
                     raise BounceError("External hardware rendering needs manual supervision; remove external devices from this batch.")
         return {"ok": True, "warnings": warnings, "tracks": len(self.tracks())}
 
-    def begin(self, jobs, roles):
+    def begin(self, jobs, roles, dry_keys=None):
         if self.transaction:
             raise BounceError("An unfinished transaction exists. Restore it first.")
-        self.preflight(jobs, roles)
+        self.preflight(jobs, roles, dry_keys)
         self.transaction = str(uuid.uuid4())
         self.fingerprint = self.structure()
         return {"transaction": self.transaction, "baseline": self.scan()}
@@ -363,6 +364,18 @@ class Engine:
         if not math.isclose(float(display), -6.0, abs_tol=0.011):
             raise BounceError("Temporary Utility gain readback is not −6 dB.")
 
+    def dry_roots(self):
+        if self.dry_keys is None:  # compatibility for older bridge clients
+            return self.selected_roots("Lead")
+        if not self.dry_keys:
+            raise BounceError("Tick at least one track in the DRY column.")
+        roots = [self.resolve(key) for key in self.dry_keys]
+        if any(t not in self.tracks() or not t.has_audio_output for t in roots):
+            raise BounceError("DRY selections must be audio-output tracks or groups.")
+        if any(p in roots for t in roots for p in self.ancestors(t)):
+            raise BounceError("For DRY export select a group or its children, not both.")
+        return roots
+
     def prepare(self, job, transaction):
         self.require_idle()
         if transaction != self.transaction or not self.transaction:
@@ -388,7 +401,7 @@ class Engine:
                 for i, t in enumerate(self.song.return_tracks):
                     self.write(t, "name", "__AB_R%04d__%s" % (i + 1, t.name))
             elif job == 9:
-                roots = self.selected_roots("Lead")
+                roots = self.dry_roots()
                 inherited_mute = [t for t in roots if any(p.mute for p in self.ancestors(t))]
                 keep = set()
                 for t in roots:
@@ -405,10 +418,14 @@ class Engine:
                     self.write(t, "output_routing_type", self.main_routing(t))
                 for t in inherited_mute:
                     self.set_parameter(t.mixer_device.track_activator, 0)
+                for i, t in enumerate(self.tracks()):
+                    self.write(t, "name", "__AB_T%04d__%s" % (i + 1, t.name))
+                for i, t in enumerate(self.song.return_tracks):
+                    self.write(t, "name", "__AB_R%04d__%s" % (i + 1, t.name))
             if job not in range(1, 10):
                 raise BounceError("Unknown delivery variant.")
             return {"prepared": job, "transaction": self.transaction,
-                    "source": "All Individual Tracks" if job == 8 else "Main"}
+                    "source": "All Individual Tracks" if job in (8, 9) else "Main"}
         except Exception:
             self.restore(final=False)
             raise
@@ -460,9 +477,9 @@ class Engine:
         if method == "status":
             return self.status()
         if method == "preflight":
-            return self.preflight(arguments["jobs"], arguments["roles"])
+            return self.preflight(arguments["jobs"], arguments["roles"], arguments.get("dry_keys"))
         if method == "begin":
-            return self.begin(arguments["jobs"], arguments["roles"])
+            return self.begin(arguments["jobs"], arguments["roles"], arguments.get("dry_keys"))
         if method == "prepare":
             return self.prepare(int(arguments["job"]), arguments["transaction"])
         if method == "restore":

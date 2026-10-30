@@ -29,6 +29,9 @@
        <DataGridTemplateColumn Header="Role" Width="110"><DataGridTemplateColumn.CellTemplate><DataTemplate>
         <ComboBox ItemsSource="{x:Static local:TrackRow.RoleOptions}" SelectedItem="{Binding Role, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Track role"/>
        </DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+       <DataGridTemplateColumn Header="DRY" Width="45"><DataGridTemplateColumn.CellTemplate><DataTemplate>
+        <CheckBox IsChecked="{Binding Dry, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanDry}" HorizontalAlignment="Center" ToolTip="Export this track without processing"/>
+       </DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
       </DataGrid.Columns>
      </DataGrid>
     </DockPanel>
@@ -57,10 +60,10 @@
     <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="110"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
     <TextBlock Grid.Row="1" Text="Track title" VerticalAlignment="Center" Margin="0,8,6,0"/>
     <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="4" Margin="0,8,0,0" Text="{Binding TrackTitle, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Track title" ToolTip="Used in exported filenames. Leave blank to use the Live Set name."/>
-    <TextBlock Text="Bit depth" VerticalAlignment="Center" Margin="0,0,6,0"/>
-    <ComboBox Grid.Column="1" ItemsSource="{Binding BitDepths}" SelectedItem="{Binding BitDepth}" AutomationProperties.Name="Export bit depth"/>
-    <TextBlock Grid.Column="2" Text="Output folder" VerticalAlignment="Center" Margin="14,0,6,0"/>
-    <TextBox Grid.Column="3" Text="{Binding Output, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Export folder"/>
+
+
+    <TextBlock Grid.Column="0" Text="Output folder" VerticalAlignment="Center" Margin="14,0,6,0"/>
+    <TextBox Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding Output, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Export folder"/>
     <Button Grid.Column="4" Content="Browse..." Click="ChooseFolder_Click" Margin="6,0,0,0" Padding="8,3"/>
    </Grid>
   </GroupBox>

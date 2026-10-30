@@ -24,15 +24,14 @@ public sealed class ExportProfile
     public static (string Key, string Label)[] Fields =>
     [
         ("source", "Rendered Track chooser"),
-        ("bit_depth", "Bit Depth chooser"),
         ("export", "Export button"),
     ];
-    public static string[] RequiredReferences => ["source", "bit_depth", "export", "bit_16", "bit_32", "source_main"];
+    public static string[] RequiredReferences => ["source", "export", "source_main"];
     public void Validate(SessionInfo session)
     {
         if (Version != session.Version) throw new InvalidOperationException("Live version changed. Calibrate its export dialog again.");
-        if (CoordinateVersion != 2 || Width <= 0 || Height <= 0)
-            throw new InvalidOperationException("Please run the new three-point calibration once.");
+        if (CoordinateVersion != 3 || Width <= 0 || Height <= 0)
+            throw new InvalidOperationException("Please run the new two-point calibration once.");
         foreach (var key in RequiredReferences)
             if (!Anchors.TryGetValue(key, out var a) || a.Reference.Length != 17 * 7 * 3
                 || a.X < 0 || a.X >= Width || a.Y < 0 || a.Y >= Height)
@@ -60,11 +59,11 @@ public sealed class CalibrationWindow : Window
         _live = Native.LiveProcess();
         if (!Native.TryExportWindow(_live.Id, out var rect))
             throw new InvalidOperationException("Open Live’s Export Audio/Video window before calibration.");
-        _profile = new() { Version = version, CoordinateVersion = 2, Width = rect.Width, Height = rect.Height,
+        _profile = new() { Version = version, CoordinateVersion = 3, Width = rect.Width, Height = rect.Height,
             Dpi = Native.GetDpiForWindow(_live.MainWindowHandle), Captured = DateTime.Now };
         var panel = new StackPanel { Margin = new(24) };
         panel.Children.Add(new TextBlock { Text = "Teach glucose your export dialog", TextWrapping = TextWrapping.Wrap });
-        panel.Children.Add(new TextBlock { Text = "Move this window away from Live’s Export dialog. Point at the three requested controls and press F8. glucose will capture the chooser values automatically; do not click or type during that final step.", Margin = new(0, 12, 0, 0), TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(new TextBlock { Text = "Move this window away from Live’s Export dialog. Point at the two requested controls (Rendered Track and Export) and press F8. glucose will capture the chooser values automatically; do not click or type during that final step.", Margin = new(0, 12, 0, 0), TextWrapping = TextWrapping.Wrap });
         panel.Children.Add(_step); panel.Children.Add(_detail);
         _back.Click += (_, _) => { if (!_capturing && _index > 0) { _index--; _profile.Anchors.Remove(ExportProfile.Fields[_index].Key); UpdateStep(); } };
         panel.Children.Add(_back);
@@ -128,6 +127,29 @@ public sealed class CalibrationWindow : Window
         }
         finally { _capturing = false; }
     }
+    public async Task<bool> TryAutomatic()
+    {
+        var rect = ExportRect();
+        double ratio = (double)rect.Width / rect.Height;
+        if (ratio < .43 || ratio > .52) return false; // known Live 12.4 English export layout only
+        _profile.Anchors["source"] = new() { X = (int)(rect.Width * .61), Y = (int)(rect.Height * .1164) };
+        var x = (int)(rect.Width * .377); var y = (int)(rect.Height * .953);
+        _profile.Anchors["export"] = new() { X = x, Y = y, Reference = Native.Patch(rect.Left + x, rect.Top + y) };
+        try
+        {
+            await CaptureValues();
+            // Verify the estimated Export button by opening the filename prompt.
+            // Do not enter a filename or start a render during calibration.
+            rect = ExportRect(); Native.Click(rect.Left + x, rect.Top + y);
+            nint save = 0;
+            for (int i = 0; i < 30 && save == 0; i++) { await Task.Delay(100); save = WindowsSaveDialog.Find(_live.Id); }
+            if (save == 0) return false;
+            Native.RequireForeground(_live.Id); Native.Key(Native.Esc); await Task.Delay(300);
+            if (WindowsSaveDialog.Find(_live.Id) != 0) return false;
+            Storage.Write("export-profile.json", _profile); Result = _profile; return true;
+        }
+        catch { return false; }
+    }
     private Native.Rect ExportRect()
     {
         Native.RequireForeground(_live.Id);
@@ -152,16 +174,12 @@ public sealed class CalibrationWindow : Window
     }
     private async Task CaptureValues()
     {
-        // Capture the six verification states with only three user points.
-        // Leave the dialog on Main / 24 bit and never press Export here.
+        // Capture both source states with one source point.
+        // Leave Main selected and keep bit depth untouched.
         await Native.EnsureEnglish(_live.Id, CancellationToken.None);
         await CaptureChoice("source", 1, "source");
         await CaptureChoice("source", 0, "source_main");
-        await CaptureChoice("bit_depth", 0, "bit_16");
-        await CaptureChoice("bit_depth", 2, "bit_32");
-        await CaptureChoice("bit_depth", 1, "bit_depth");
-        foreach (var pair in new[] { ("source", "source_main"), ("bit_16", "bit_depth"),
-            ("bit_32", "bit_depth"), ("bit_16", "bit_32") })
+        foreach (var pair in new[] { ("source", "source_main") })
         {
             double difference = _profile.Anchors[pair.Item1].Reference.Zip(_profile.Anchors[pair.Item2].Reference,
                 (a, b) => Math.Abs(a - b)).Average();

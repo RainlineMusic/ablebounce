@@ -57,6 +57,9 @@ public sealed class TrackRow : Observable
 {
     public static string[] RoleOptions { get; } = ["Unassigned", "Inherit", "Lead", "Backing", "Instrument"];
     public TrackInfo Info { get; }
+    private bool _dry;
+    public bool Dry { get => _dry; set => Set(ref _dry, value); }
+    public bool CanDry => Info.Audio && !Info.Frozen;
     private string _role;
     public string Role { get => _role; set => Set(ref _role, value); }
     public string Name => Info.Name;
@@ -93,7 +96,7 @@ public sealed class DeliveryRow : Observable
         new(6, "Backing mix", "Backing vocals with the original master chain.", "Backing", "Original"),
         new(7, "Full mix · lead −6 dB", "Temporary final Utility trim; fader automation stays.", "Lead −6 dB", "Original"),
         new(8, "Mixed multitrack", "Post-fader tracks, groups and returns in separate folders.", "All tracks", "Excluded"),
-        new(9, "Dry lead vocal", "Lead sum without devices, sends or parent-bus effects.", "Dry lead", "Bypassed"),
+        new(9, "Selected tracks (DRY)", "Checked tracks without audio effects, sends, parent or master processing.", "Selected", "Bypassed"),
     ];
 }
 

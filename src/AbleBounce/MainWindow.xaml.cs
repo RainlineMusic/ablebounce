@@ -42,9 +42,9 @@ public partial class MainWindow : Window
     private void SaveRoles()
     {
         if (_session == null || _demo || _session.Transaction != null || string.IsNullOrWhiteSpace(_session.Path)) return;
-        Storage.Write(RoleFile(_session.Path), _vm.Tracks.ToDictionary(t => t.Info.Key, t => new SavedRole(t.Name, t.Role)));
+        Storage.Write(RoleFile(_session.Path), _vm.Tracks.ToDictionary(t => t.Info.Key, t => new SavedRole(t.Name, t.Role, t.Dry)));
     }
-    private sealed record SavedRole(string Name, string Role);
+    private sealed record SavedRole(string Name, string Role, bool Dry = false);
     private Dictionary<string, string> Roles() => _vm.Tracks.ToDictionary(t => t.Info.Key, t => t.Role);
     private async Task Connect()
     {
@@ -62,7 +62,7 @@ public partial class MainWindow : Window
             while (parent != null && visited.Add(parent))
             { depth++; parent = tracks.FirstOrDefault(p => p.Key == parent)?.Parent; }
             string? role = saved != null && saved.TryGetValue(t.Key, out var s) && s.Name == t.Name ? s.Role : null;
-            _vm.Tracks.Add(new TrackRow(t, i + 1, depth, role));
+            _vm.Tracks.Add(new TrackRow(t, i + 1, depth, role) { Dry = saved != null && saved.TryGetValue(t.Key, out var dry) && dry.Name == t.Name && dry.Dry });
         }
         _vm.Project = string.IsNullOrEmpty(session.Name) ? "Untitled Set" : session.Name;
         _vm.Connection = "Live " + session.Version + " · Connected";
@@ -95,20 +95,35 @@ public partial class MainWindow : Window
         }
         catch (Exception ex) { ShowError(ex); }
     }
-    private void Calibrate_Click(object sender, RoutedEventArgs e)
+    private async void Calibrate_Click(object sender, RoutedEventArgs e)
     {
-        if (_demo) { MessageBox.Show("Calibration needs a real Live export dialog."); return; }
-        if (_session == null) { MessageBox.Show("Connect to Live first."); return; }
-        if (MessageBox.Show(this,
-            "In Live, open Export Audio/Video (Ctrl+Shift+R).\n\nSet:\n• Rendered Track: All Individual Tracks\n• WAV, 24-bit, No Dither\n• Encode PCM: On\n• Normalize, Convert to Mono, Render as Loop, MP3, Create Video: Off\n• Include Return and Main Effects: Off\n\nChoose your sample rate, render start and length (including tails). Keep the export dialog size, theme and display scale unchanged.\n\nLeave that dialog open, then start calibration. Point at Rendered Track, Bit Depth and Export in Live and press F8 once for each (three times total). Point at the displayed value text, not the arrow. The remaining states are captured automatically; do not interact with Live during that step.",
-            "Prepare Live's export dialog", MessageBoxButton.OKCancel, MessageBoxImage.Information) != MessageBoxResult.OK) return;
+        if (_demo || _session == null) return;
+        _vm.Busy = true;
         try
         {
-            var wizard = new CalibrationWindow(_session.Version) { Owner = this };
-            if (wizard.ShowDialog() == true)
-                _vm.AddLog("Export calibration saved. Close Live's Export dialog before starting your batch.");
+            WindowState = WindowState.Minimized;
+            var live = Native.LiveProcess(); await Native.Focus(live, CancellationToken.None);
+            if (!Native.TryExportWindow(live.Id, out _)) Native.Chord(Native.Ctrl, Native.Shift, (ushort)'R');
+            var end = DateTime.UtcNow.AddSeconds(10);
+            while (!Native.TryExportWindow(live.Id, out _) && DateTime.UtcNow < end) await Task.Delay(100);
+            var automatic = new CalibrationWindow(_session.Version);
+            bool success = await automatic.TryAutomatic();
+            automatic.Close();
+            if (!success)
+            {
+                // Automatic probing may have closed the export dialog. Reopen it
+                // before asking for the two manual points.
+                await Native.Focus(live, CancellationToken.None);
+                if (WindowsSaveDialog.Find(live.Id) != 0) Native.Key(Native.Esc);
+                if (!Native.TryExportWindow(live.Id, out _)) Native.Chord(Native.Ctrl, Native.Shift, (ushort)'R');
+                await Task.Delay(500);
+                var wizard = new CalibrationWindow(_session.Version);
+                success = wizard.ShowDialog() == true;
+            }
+            if (success) _vm.AddLog("Calibration saved. Bit depth stays as configured in Live.");
         }
         catch (Exception ex) { ShowError(ex); }
+        finally { WindowState = WindowState.Normal; _vm.Busy = false; Activate(); }
     }
     private void MarkRemaining_Click(object sender, RoutedEventArgs e)
     {
@@ -151,10 +166,10 @@ public partial class MainWindow : Window
                 message => Dispatcher.Invoke(() => _vm.AddLog(message)),
                 (id, state) => Dispatcher.Invoke(() => _vm.Deliveries.Single(d => d.Id == id).State = state));
             var source = _session;
-            var roles = Roles(); var bits = _vm.Bits; var output = _vm.Output; var title = _vm.TrackTitle; var token = _cancellation.Token;
+            var roles = Roles(); var bits = 0; var dryKeys = _vm.Tracks.Where(t => t.Dry).Select(t => t.Info.Key).ToArray(); var output = _vm.Output; var title = _vm.TrackTitle; var token = _cancellation.Token;
             // UI Automation can block while another application's provider is
             // busy. Keep it off WPF's dispatcher so Cancel remains responsive.
-            finished = await Task.Run(() => queue.Run(source, roles, jobs, bits, output, token, title));
+            finished = await Task.Run(() => queue.Run(source, roles, jobs, bits, output, token, title, dryKeys));
         }
         catch (OperationCanceledException) { _vm.AddLog("Cancelled. Completed exports have been kept; see activity for restoration status."); }
         catch (Exception ex) { exportError = ex.Message; ShowError(ex); }
@@ -164,12 +179,12 @@ public partial class MainWindow : Window
             foreach (var row in _vm.Deliveries)
                 if (row.State is "Rendering" or "Preparing") row.State = "Review";
                 else if (row.State == "Queued") row.State = "Not run";
-            var retained = _vm.Tracks.ToDictionary(t => t.Info.Key, t => new SavedRole(t.Name, t.Role));
+            var retained = _vm.Tracks.ToDictionary(t => t.Info.Key, t => new SavedRole(t.Name, t.Role, t.Dry));
             try
             {
                 await Connect();
                 foreach (var row in _vm.Tracks)
-                    if (retained.TryGetValue(row.Info.Key, out var saved) && saved.Name == row.Name) row.Role = saved.Role;
+                    if (retained.TryGetValue(row.Info.Key, out var saved) && saved.Name == row.Name) { row.Role = saved.Role; row.Dry = saved.Dry; }
                 SaveRoles();
             }
             catch { _vm.Connected = false; }

@@ -32,10 +32,10 @@ try
     try { new ExportProfile { Version = "12.4.6" }.Validate(new SessionInfo { Version = "12.4.5" }); }
     catch (InvalidOperationException) { calibrationRejected = true; }
     Check(calibrationRejected, "Calibration must remain specific to the exact Live patch");
-    Check(ExportProfile.Fields.Length == 3, "Calibration must require only three user captures");
-    Check(ExportProfile.Fields.Select(f => f.Key).SequenceEqual(new[] { "source", "bit_depth", "export" }),
+    Check(ExportProfile.Fields.Length == 2, "Calibration must require only three user captures");
+    Check(ExportProfile.Fields.Select(f => f.Key).SequenceEqual(new[] { "source", "export" }),
         "Unexpected calibration controls");
-    Check(ExportProfile.RequiredReferences.Length == 6, "Automatic calibration must retain six verification states");
+    Check(ExportProfile.RequiredReferences.Length == 3, "Automatic calibration must retain six verification states");
     var shown = new TaskCompletionSource<System.Windows.Window>(TaskCreationOptions.RunContinuationsAsynchronously);
     var windowThread = new Thread(() =>
     {
@@ -110,6 +110,7 @@ try
     foreach (int bits in new[] { 16, 24, 32 })
     {
         var wave = WaveFile.Inspect(Wav(bits, bits == 32 ? 3 : 1), bits);
+        Check(WaveFile.Inspect(Wav(bits, bits == 32 ? 3 : 1), 0).Bits == bits, "Live-selected bit depth rejected");
         Check(wave.Frames == 100 && wave.SampleRate == 48000 && wave.Bits == bits, "Valid WAV rejected");
     }
     Reject(() => WaveFile.Inspect(Wav(16), 24), "Wrong bit depth accepted");

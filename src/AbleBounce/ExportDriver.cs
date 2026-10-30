@@ -100,20 +100,12 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
             Native.Chord(Native.Ctrl, Native.Shift, (ushort)'R');
         await WaitExportDialog(ct);
         report("Export window found. Selecting render source…");
-        var sourceKey = job == 8 ? "source" : "source_main";
+        var sourceKey = job is 8 or 9 ? "source" : "source_main";
         if (!Matches(sourceKey))
         {
-            await Choose("source", job == 8 ? 1 : 0, ct);
+            await Choose("source", job is 8 or 9 ? 1 : 0, ct);
             if (!Matches(sourceKey))
                 throw new InvalidOperationException("Cannot verify the selected render source. Recalibrate Main and All Individual Tracks.");
-        }
-        var bitsKey = bits == 16 ? "bit_16" : bits == 32 ? "bit_32" : "bit_depth";
-        if (!Matches(bitsKey))
-        {
-            report("Changing bit depth…");
-            await Choose("bit_depth", bits == 16 ? 0 : bits == 24 ? 1 : 2, ct);
-            if (!Matches(bitsKey))
-                throw new InvalidOperationException("Cannot verify the selected bit depth. Recalibrate the export dialog.");
         }
         // Fixed export switches are deliberately user-managed. Only source,
         // bit depth and Export are automated and calibrated.
@@ -164,7 +156,7 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
             catch (TimeoutException) { }
         }
         if (result.Count == 0) throw new TimeoutException("Export timed out. Keep Live open; use Restore after its render has stopped.");
-        if (job != 8 && result.Count != 1) throw new IOException("Unexpected number of files for a single mix render.");
+        if (job != 8 && job != 9 && result.Count != 1) throw new IOException("Unexpected number of files for a single mix render.");
         var waves = result.Select(f => WaveFile.Inspect(f, bits)).ToArray();
         if (waves.Any(w => w.Frames != waves[0].Frames || w.SampleRate != waves[0].SampleRate))
             throw new IOException("The exported files have different lengths or sample rates.");
@@ -230,7 +222,7 @@ public static class WaveFile
             if (id == "data") data = size;
             file.Position = end + (size & 1);
         }
-        if (bits != expectedBits || channels != 2 || rate <= 0 || block <= 0 || data <= 0 || data % block != 0)
+        if ((expectedBits != 0 && bits != expectedBits) || bits is not (16 or 24 or 32) || channels != 2 || rate <= 0 || block <= 0 || data <= 0 || data % block != 0)
             throw new IOException("Unexpected WAV bit depth, channels or unfinished data: " + Path.GetFileName(path));
         if ((bits == 32 && format != 3) || (bits != 32 && format != 1)) throw new IOException("Unexpected PCM/float WAV encoding.");
         return new(bits, channels, rate, data / block);

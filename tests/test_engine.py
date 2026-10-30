@@ -139,6 +139,24 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(original, self.snapshot())
         self.assertEqual(self.song.file_path, "")
 
+    def test_selected_instrument_dry_without_vocal_roles(self):
+        roles = {key: "Instrument" for key in self.roles}
+        before = self.snapshot()
+        token = self.engine.begin([9], roles, ["t:0"])["transaction"]
+        result = self.engine.prepare(9, token)
+        self.assertEqual(result["source"], "All Individual Tracks")
+        self.assertEqual(self.song.tracks[0].output_routing_type.display_name, "Main")
+        self.assertTrue(self.song.tracks[0].name.startswith("__AB_T0001__"))
+        self.assertEqual(self.song.tracks[0].devices[0].parameters[0].value, 0)
+        self.engine.restore()
+        self.assertEqual(before, self.snapshot())
+
+    def test_dry_empty_selection_rejected(self):
+        with self.assertRaises(ab.BounceError): self.engine.begin([9], self.roles, [])
+
+    def test_dry_group_child_overlap_rejected(self):
+        with self.assertRaises(ab.BounceError): self.engine.begin([9], self.roles, ["t:1", "t:2"])
+
     def test_all_nine_restore_to_exact_baseline(self):
         original = self.snapshot()
         token = self.begin()

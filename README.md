@@ -1,4 +1,12 @@
-# glucose 0.1.9
+# glucose 0.2.0
+
+- Calibrate minimizes glucose, brings Live forward and opens Export Audio/Video.
+- Automatic calibration supports the known tall Live 12.4 English dialog layout. It tests the source chooser and the Export button (opens/cancels the filename dialog without rendering). Unsupported layouts or failed verification fall back to two F8 points: Rendered Track text and Export.
+- Set bit depth in Live; glucose leaves it unchanged and validates the WAV encoding after rendering. Old profiles need calibration once.
+- Select **Selected tracks (DRY)** and tick tracks in the DRY column. Files go to `Multitrack/Dry Tracks`. Audio effects, sends, parent-bus and master processing are bypassed; instruments remain active. Selecting a group exports its dry sum. Select either a group or its children, not both. Frozen tracks must be unfrozen first.
+- Inherit means use the parent group's role.
+- Install the updated bridge and restart Live before using the new DRY selection.
+
 
 - Track title prefixes the batch folder and delivered WAV filenames; blank uses the Set name.
 - Render source and bit depth are verified on each pass and changed only when different.
