@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text;
+using System.Text.Json;
 using AbleBounce;
 
 int checks = 0;
@@ -10,6 +11,17 @@ string temp = Path.Combine(Path.GetTempPath(), "AbleBounce-tests-" + Guid.NewGui
 Directory.CreateDirectory(temp);
 try
 {
+    var wire = BridgeClient.EncodeRequest("request-123", "test-token", "scan",
+        new { nested = new { label = "Lead\nVocal", unicode = "Бэки" } });
+    Check(wire.Count(b => b == (byte)'\n') == 1 && wire[^1] == (byte)'\n',
+        "Bridge request must contain exactly one physical newline, at its end");
+    using (var request = JsonDocument.Parse(wire.AsMemory(0, wire.Length - 1)))
+    {
+        Check(request.RootElement.GetProperty("id").GetString() == "request-123", "Request ID changed");
+        Check(request.RootElement.GetProperty("args").GetProperty("nested").GetProperty("label").GetString() == "Lead\nVocal",
+            "Escaped newline did not round-trip");
+    }
+    Check(Storage.Json.WriteIndented, "Wire encoding must not change settings serialization");
     string Wav(int bits, int format = 1, int channels = 2, int frames = 100)
     {
         var path = Path.Combine(temp, Guid.NewGuid() + ".wav");

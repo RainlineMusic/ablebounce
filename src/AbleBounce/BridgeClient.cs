@@ -9,6 +9,10 @@ namespace AbleBounce;
 public sealed class BridgeClient
 {
     public const int Port = 16846;
+    // Wire framing is independent of pretty-printed settings files.
+    private static readonly JsonSerializerOptions WireJson = new(Storage.Json) { WriteIndented = false };
+    public static byte[] EncodeRequest(string id, string token, string method, object? args = null) =>
+        Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { id, token, method, args = args ?? new { } }, WireJson) + "\n");
     public async Task<JsonElement> Call(string method, object? args = null, CancellationToken cancellation = default, int timeoutSeconds = 12)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
@@ -22,7 +26,7 @@ public sealed class BridgeClient
         {
             await client.ConnectAsync("127.0.0.1", Port, timeout.Token);
             await using var stream = client.GetStream();
-            var bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { id, token, method, args = args ?? new { } }, Storage.Json) + "\n");
+            var bytes = EncodeRequest(id, token, method, args);
             await stream.WriteAsync(bytes, timeout.Token);
             using var reader = new StreamReader(stream, Encoding.UTF8);
             var line = await reader.ReadLineAsync(timeout.Token) ?? throw new IOException("Live closed the bridge connection.");
