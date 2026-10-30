@@ -100,6 +100,7 @@ class AbleBounce(ControlSurface):
         # saved working Set is the recovery point if Live itself is closing.
         try:
             if self._engine.transaction:
+                self._engine.require_idle()
                 self._engine.restore()
         except Exception as e:
             self.log_message("AbleBounce restoration during disconnect: " + str(e))

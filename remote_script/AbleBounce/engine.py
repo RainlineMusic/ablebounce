@@ -147,18 +147,19 @@ class Engine:
         output = []
         for t in self.all_tracks():
             k = self.key(t)
-            parent = self.parent(t)
+            parent = self.parent(t) if k.startswith("t:") else None
             group = bool(getattr(t, "is_foldable", False))
             output.append({
                 "key": k, "name": t.name, "parent": self.key(parent) if parent else None,
                 "group": group, "return": k.startswith("r:"), "master": k == "master",
                 "audio": bool(getattr(t, "has_audio_output", True)),
-                "frozen": bool(getattr(t, "is_frozen", False)), "mute": bool(t.mute),
-                "solo": bool(getattr(t, "solo", False)), "color": int(t.color),
+                "frozen": bool(getattr(t, "is_frozen", False)) if k.startswith("t:") else False,
+                "mute": bool(t.mute) if k != "master" else False,
+                "solo": bool(t.solo) if k != "master" else False, "color": int(t.color),
                 "suggested_role": "Inherit" if parent else ("Unassigned" if group else role_guess(t.name)),
                 "volume": str(t.mixer_device.volume),
                 "volume_automation": int(t.mixer_device.volume.automation_state),
-                "output": self.routing_name(getattr(t, "output_routing_type", None)),
+                "output": self.routing_name(t.output_routing_type) if k != "master" else "",
                 "devices": [d.name for d in t.devices],
             })
         app = self.application
@@ -198,6 +199,7 @@ class Engine:
                     raise BounceError("Conflicting roles in group %s. Assign its children instead." % p.name)
 
     def preflight(self, jobs, roles):
+        self.require_idle()
         self.roles = dict(roles)
         self.validate_roles()
         if not self.song.file_path:
@@ -208,7 +210,7 @@ class Engine:
             raise BounceError("Return all tracks to Arrangement before exporting.")
         if any(bool(getattr(t, "back_to_arranger", False)) for t in self.tracks()):
             raise BounceError("Some tracks are playing Session clips. Use Back to Arrangement first.")
-        if any(bool(getattr(t, "solo", False)) for t in self.all_tracks()):
+        if any(bool(t.solo) for t in self.tracks() + list(self.song.return_tracks)):
             raise BounceError("Clear existing Solo states before exporting; muted tracks are preserved.")
         if not jobs or any(j not in range(1, 10) for j in jobs):
             raise BounceError("Choose at least one valid delivery variant.")
@@ -230,6 +232,10 @@ class Engine:
             frozen = [t.name for t in dry_tracks if getattr(t, "is_frozen", False)]
             if frozen:
                 raise BounceError("Unfreeze these dry-vocal tracks in Live first: " + ", ".join(frozen))
+        if 7 in jobs:
+            frozen = [t.name for t in self.selected_roots("Lead") if getattr(t, "is_frozen", False)]
+            if frozen:
+                raise BounceError("Unfreeze these lead trim roots in Live first: " + ", ".join(frozen))
         # Shared buses that contain both vocal and instrumental material require
         # explicit project-side separation; a folder relationship is not proof.
         warnings = []
@@ -256,6 +262,22 @@ class Engine:
         self.transaction = str(uuid.uuid4())
         self.fingerprint = self.structure()
         return {"transaction": self.transaction, "baseline": self.scan()}
+
+    def status(self):
+        app = self.application
+        try:
+            dialogs = int(app.open_dialog_count)
+            message = str(app.current_dialog_message)
+        except AttributeError:
+            return {"supported": False, "idle": False, "dialogs": -1,
+                    "message": "Live does not expose dialog status; automatic mutation is disabled."}
+        return {"supported": True, "idle": dialogs == 0 and not message,
+                "dialogs": dialogs, "message": message}
+
+    def require_idle(self):
+        status = self.status()
+        if not status["idle"]:
+            raise BounceError("Close Live's dialogs or finish/cancel its render before changing Set state. " + status["message"])
 
     def write(self, obj, attribute, value, parameter=False):
         old = parameter_state(obj) if parameter else getattr(obj, attribute)
@@ -328,6 +350,7 @@ class Engine:
             raise BounceError("Temporary Utility gain readback is not −6 dB.")
 
     def prepare(self, job, transaction):
+        self.require_idle()
         if transaction != self.transaction or not self.transaction:
             raise BounceError("Transaction does not match.")
         self.check_structure()
@@ -352,6 +375,7 @@ class Engine:
                     self.write(t, "name", "__AB_R%04d__%s" % (i + 1, t.name))
             elif job == 9:
                 roots = self.selected_roots("Lead")
+                inherited_mute = [t for t in roots if any(p.mute for p in self.ancestors(t))]
                 keep = set()
                 for t in roots:
                     keep.update([t] + self.descendants(t))
@@ -365,6 +389,8 @@ class Engine:
                 for t in roots:
                     self.bypass(t, recursive=True)
                     self.write(t, "output_routing_type", self.main_routing(t))
+                for t in inherited_mute:
+                    self.set_parameter(t.mixer_device.track_activator, 0)
             if job not in range(1, 10):
                 raise BounceError("Unknown delivery variant.")
             return {"prepared": job, "transaction": self.transaction,
@@ -417,6 +443,8 @@ class Engine:
             return {"protocol": 1, "transaction": self.transaction}
         if method == "scan":
             return self.scan()
+        if method == "status":
+            return self.status()
         if method == "preflight":
             return self.preflight(arguments["jobs"], arguments["roles"])
         if method == "begin":
@@ -424,6 +452,7 @@ class Engine:
         if method == "prepare":
             return self.prepare(int(arguments["job"]), arguments["transaction"])
         if method == "restore":
+            self.require_idle()
             if arguments.get("transaction") != self.transaction:
                 raise BounceError("Transaction does not match.")
             return self.restore(final=bool(arguments.get("final", True)))

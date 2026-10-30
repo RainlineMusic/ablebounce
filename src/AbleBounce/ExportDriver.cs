@@ -127,7 +127,7 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
         }
         throw new InvalidOperationException("Live did not confirm the working Set path. Nothing has been changed by the bridge.");
     }
-    public async Task<List<string>> Render(int job, int bits, string directory, Action<string> report, CancellationToken ct)
+    public async Task<List<string>> Render(int job, int bits, string directory, int expectedFiles, Action<string> report, CancellationToken ct)
     {
         Attach(); await Native.Focus(Live, ct);
         if (Directory.EnumerateFileSystemEntries(directory).Any()) throw new IOException("The staging directory must be empty.");
@@ -155,14 +155,15 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
             // Do not require focus during an uninterrupted render. No UI input
             // is sent until focus and process identity have been verified again.
             var files = Directory.GetFiles(directory, "*.wav").ToList();
-            if (files.Count == 0 || FileDialog(Live.Id) != null) continue;
+            if (files.Count < expectedFiles || FileDialog(Live.Id) != null) continue;
             try
             {
                 foreach (var file in files) WaveFile.Inspect(file, bits, exclusive: true);
                 // A valid header can appear before render completion. Require
                 // Live's main thread to respond, and no modal window to remain.
                 if (ModalWindowExists(Live.Id)) continue;
-                await bridge.Call("ping", cancellation: ct, timeoutSeconds: 3);
+                var status = await bridge.Call("status", cancellation: ct, timeoutSeconds: 3);
+                if (!status.GetProperty("idle").GetBoolean()) continue;
                 await Task.Delay(450, ct);
                 var again = Directory.GetFiles(directory, "*.wav");
                 if (again.Length != files.Count) continue;
@@ -190,7 +191,13 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
     public async Task EnsureStopped()
     {
         Attach();
-        if (!RenderMayBeActive && !ModalWindowExists(Live.Id)) return;
+        try
+        {
+            var initial = await bridge.Call("status", timeoutSeconds: 3);
+            if (initial.GetProperty("idle").GetBoolean() && !ModalWindowExists(Live.Id))
+            { RenderMayBeActive = false; return; }
+        }
+        catch (TimeoutException) { }
         await Native.Focus(Live, CancellationToken.None);
         // At most two Esc presses: Save/Export dialog or the current render.
         for (int attempt = 0; attempt < 2; attempt++)
@@ -198,8 +205,8 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
             Guard(); Native.Key(Native.Esc); await Task.Delay(700);
             try
             {
-                await bridge.Call("ping", timeoutSeconds: 3);
-                if (!ModalWindowExists(Live.Id)) { RenderMayBeActive = false; return; }
+                var status = await bridge.Call("status", timeoutSeconds: 3);
+                if (status.GetProperty("idle").GetBoolean() && !ModalWindowExists(Live.Id)) { RenderMayBeActive = false; return; }
             }
             catch (TimeoutException) { }
         }

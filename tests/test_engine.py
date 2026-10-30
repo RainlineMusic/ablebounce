@@ -109,6 +109,8 @@ class Song:
 
 
 class Application:
+    open_dialog_count = 0
+    current_dialog_message = ""
     def get_major_version(self): return 12
     def get_minor_version(self): return 4
     def get_bugfix_version(self): return 6
@@ -338,6 +340,36 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(ab.role_guess("BGV Harmony"), "Backing")
         self.assertEqual(ab.role_guess("Vocal"), "Unassigned")
         self.assertEqual(ab.role_guess("Audio 17"), "Unassigned")
+
+    def test_mutation_during_render_is_rejected(self):
+        token = self.begin([4])
+        self.engine.application.open_dialog_count = 1
+        self.engine.application.current_dialog_message = "Rendering audio…"
+        with self.assertRaises(ab.BounceError): self.engine.prepare(4, token)
+        with self.assertRaises(ab.BounceError): self.engine.dispatch("restore", {"transaction": token})
+        self.assertEqual(self.song.master_track.devices[0].parameters[0].value, 1)
+
+    def test_master_unsupported_mute_is_never_read(self):
+        class MasterTrack(Track):
+            @property
+            def mute(self): raise RuntimeError("not in master track")
+        self.song.master_track = MasterTrack("Main")
+        self.assertFalse(self.engine.scan()["tracks"][-1]["mute"])
+        self.begin([1])
+
+    def test_frozen_trim_root_rejected_before_transaction(self):
+        self.song.tracks[1].is_frozen = True
+        with self.assertRaises(ab.BounceError): self.begin([7])
+        self.assertIsNone(self.engine.transaction)
+
+    def test_dry_does_not_unmute_a_muted_parent(self):
+        self.roles["t:1"] = "Unassigned"
+        self.roles["t:2"] = "Lead"
+        self.roles["t:3"] = "Instrument"
+        self.song.tracks[1].mixer_device.track_activator.value = 0
+        token = self.begin([9])
+        self.engine.prepare(9, token)
+        self.assertTrue(self.song.tracks[2].mute)
 
 
 if __name__ == "__main__":

@@ -20,10 +20,12 @@ Live's own engine hosts all instruments, third-party plugins and audio processin
 Request: `{"id":"…","token":"…","method":"…","args":{…}}` followed by newline.
 Reply: `{"id":"…","ok":true,"result":{…}}` or `ok:false,error:"…"`.
 
-Methods are an allowlist: ping, scan, preflight, begin, prepare, restore. Prepare
+Methods are an allowlist: ping, status, scan, preflight, begin, prepare, restore. Prepare
 and restore require the active transaction ID. A changed track-object sequence
 invalidates preparation. Socket accepts/reads/writes are nonblocking and bounded;
 no worker thread touches Live objects. Responses may pause during offline render.
+Every dispatched state mutation requires Live's `open_dialog_count == 0` and an
+empty `current_dialog_message`. File completion alone never authorises restore.
 
 Track keys `t:N`, return keys `r:N`, `master` are scoped to a scan/transaction, not
 stable identities across reordered Sets. Saved roles additionally check names.

@@ -41,7 +41,8 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
                 var staging = Path.Combine(root, "Staging", job.ToString("D2"));
                 Directory.CreateDirectory(staging);
                 jobState(job, "Rendering");
-                var files = await _driver.Render(job, bits, staging, report, ct);
+                int expectedFiles = job == 8 ? source.Tracks.Count(t => t.Audio) : 1;
+                var files = await _driver.Render(job, bits, staging, expectedFiles, report, ct);
                 foreach (var f in files)
                 {
                     var wave = WaveFile.Inspect(f, bits);

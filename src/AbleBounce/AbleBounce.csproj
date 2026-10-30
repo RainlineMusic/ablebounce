@@ -13,7 +13,5 @@
   </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="../../remote_script/AbleBounce/*.py" Link="Bridge/%(Filename)%(Extension)" />
-    <Reference Include="UIAutomationClient" />
-    <Reference Include="UIAutomationTypes" />
   </ItemGroup>
 </Project>
