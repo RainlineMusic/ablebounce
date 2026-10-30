@@ -98,6 +98,7 @@ public static class WindowsSaveDialog
         if (!Verified(dialog, process)) throw new IOException("The verified Windows Save dialog is unavailable.");
         var field = Filename(dialog);
         Native.SetForegroundWindow(dialog);
+        await Task.Delay(350, cancellation);
         Native.RequireForeground(process);
         if (!Native.GetWindowRect(field, out var rect)) throw new IOException("Cannot locate the filename field.");
         Native.Click(rect.Left + rect.Width / 2, rect.Top + rect.Height / 2);
