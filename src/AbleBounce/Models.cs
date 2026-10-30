@@ -109,6 +109,7 @@ public sealed class ViewModel : Observable
     private string _status = "Open Ableton Live, enable the AbleBounce control surface, then connect.";
     private bool _busy;
     private bool _connected;
+    private bool _exportRunning;
     private string _output = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "AbleBounce Exports");
     private string _bitDepth = "24-bit";
     private int _completed;
@@ -120,6 +121,7 @@ public sealed class ViewModel : Observable
     public string Status { get => _status; set => Set(ref _status, value); }
     public bool Busy { get => _busy; set { Set(ref _busy, value); Changed(nameof(Idle)); Changed(nameof(CanExport)); } }
     public bool Idle => !Busy;
+    public bool ExportRunning { get => _exportRunning; set => Set(ref _exportRunning, value); }
     public bool Connected { get => _connected; set { Set(ref _connected, value); Changed(nameof(CanExport)); } }
     public bool CanExport => Connected && !Busy;
     public string Output { get => _output; set => Set(ref _output, value); }

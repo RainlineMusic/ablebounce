@@ -24,6 +24,9 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
         Directory.CreateDirectory(root);
         report("Creating a separate working Set in the same project folder…");
         string working = await _driver.CreateWorkingCopy(source, ct);
+        var workingScan = await bridge.Scan(ct);
+        if (!workingScan.Tracks.Select(t => (t.Key, t.Name, t.Parent)).SequenceEqual(source.Tracks.Select(t => (t.Key, t.Name, t.Parent))))
+            throw new InvalidOperationException("The Set structure changed while creating the working copy. Connect again and review roles.");
         var begun = await bridge.Call("begin", new { jobs, roles }, ct);
         _transaction = begun.GetProperty("transaction").GetString() ?? throw new IOException("Live did not create a transaction.");
         Storage.Write("last-session.json", new { source = source.Path, working, output = root, transaction = _transaction, state = "running" });

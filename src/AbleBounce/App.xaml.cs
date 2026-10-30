@@ -27,6 +27,10 @@ public partial class App : Application
                 // viewport. Render the actual root visual at an explicit size,
                 // excluding nonclient chrome and any offscreen black edge.
                 var root = (FrameworkElement)window.Content;
+                root.SetValue(System.Windows.Documents.TextElement.ForegroundProperty, window.Foreground);
+                root.SetValue(System.Windows.Documents.TextElement.FontFamilyProperty, window.FontFamily);
+                root.SetValue(System.Windows.Documents.TextElement.FontSizeProperty, window.FontSize);
+                window.Content = null; // remove the hosted desktop's parent clip
                 int sizeIndex = Array.IndexOf(e.Args, "--preview-size");
                 var size = sizeIndex >= 0 && sizeIndex + 1 < e.Args.Length ? e.Args[sizeIndex + 1].Split('x') : ["1280", "860"];
                 int width = int.Parse(size[0]), height = int.Parse(size[1]);

@@ -112,7 +112,7 @@ public partial class MainWindow : Window
     }
     private void MarkRemaining_Click(object sender, RoutedEventArgs e)
     {
-        foreach (var t in _vm.Tracks.Where(t => t.Role == "Unassigned" && !t.Info.Group))
+        foreach (var t in _vm.Tracks.Where(t => (t.Role == "Unassigned" || t.Role == "Inherit") && !t.Info.Group))
         {
             var parent = t.Info.Parent;
             string ancestorRole = "Unassigned";
@@ -146,7 +146,7 @@ public partial class MainWindow : Window
         if (MessageBox.Show(this,
             "AbleBounce will create a working .als beside your current Set. Your original file stays untouched.\n\nClose Live's Export dialog before continuing. Keep the desktop unlocked and let AbleBounce control Live. All passes reuse the export range and sample rate configured in Live.\n\nSave your original Set in Live first if you want its latest edits stored there too. The working copy will include the current edits.",
             "Start batch export", MessageBoxButton.OKCancel, MessageBoxImage.Information) != MessageBoxResult.OK) return;
-        _vm.Busy = true; _cancellation = new();
+        _vm.Busy = true; _vm.ExportRunning = true; _cancellation = new();
         SaveRoles();
         foreach (var d in _vm.Deliveries) d.State = d.Selected ? "Queued" : "Skipped";
         string? finished = null;
@@ -157,15 +157,18 @@ public partial class MainWindow : Window
                 (id, state) => Dispatcher.Invoke(() => _vm.Deliveries.Single(d => d.Id == id).State = state));
             var source = _session;
             var roles = Roles(); var bits = _vm.Bits; var output = _vm.Output; var token = _cancellation.Token;
-            // UIA and input operations run on this STA dispatcher. Async waits
-            // yield to WPF, keeping Cancel accessible without a second UI thread.
-            finished = await queue.Run(source, roles, jobs, bits, output, token);
+            // UI Automation can block while another application's provider is
+            // busy. Keep it off WPF's dispatcher so Cancel remains responsive.
+            finished = await Task.Run(() => queue.Run(source, roles, jobs, bits, output, token));
         }
         catch (OperationCanceledException) { _vm.AddLog("Cancelled. Completed exports have been kept; see activity for restoration status."); }
         catch (Exception ex) { ShowError(ex); }
         finally
         {
-            _cancellation.Dispose(); _cancellation = null; _vm.Busy = false;
+            _cancellation.Dispose(); _cancellation = null; _vm.ExportRunning = false; _vm.Busy = false;
+            foreach (var row in _vm.Deliveries)
+                if (row.State is "Rendering" or "Preparing") row.State = "Review";
+                else if (row.State == "Queued") row.State = "Not run";
             var retained = _vm.Tracks.ToDictionary(t => t.Info.Key, t => new SavedRole(t.Name, t.Role));
             try
             {

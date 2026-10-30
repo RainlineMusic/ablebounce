@@ -63,6 +63,7 @@ public sealed class CalibrationWindow : Window
     public ExportProfile? Result { get; private set; }
     public CalibrationWindow(string version)
     {
+        Style = (Style)Application.Current.FindResource(typeof(Window));
         Title = "AbleBounce · Export calibration"; Width = 440; Height = 440;
         ResizeMode = ResizeMode.NoResize; Topmost = true;
         _live = Native.LiveProcess();

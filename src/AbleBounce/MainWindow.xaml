@@ -1,6 +1,6 @@
 <Window x:Class="AbleBounce.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:AbleBounce"
-        Title="AbleBounce" Width="1280" Height="860" MinWidth="1060" MinHeight="740" WindowStartupLocation="CenterScreen">
-  <Grid>
+        Title="AbleBounce" Width="1280" Height="860" MinWidth="1060" MinHeight="740" WindowStartupLocation="CenterScreen" Style="{StaticResource {x:Type Window}}" UseLayoutRounding="True">
+  <Grid Background="{StaticResource CanvasBrush}">
     <Grid.RowDefinitions><RowDefinition Height="78"/><RowDefinition Height="*"/><RowDefinition Height="104"/></Grid.RowDefinitions>
     <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="26,0">
       <Grid>
@@ -141,7 +141,7 @@
           <TextBlock Text="{Binding Summary}" Foreground="#E2F0E2" FontWeight="SemiBold" FontSize="14"/>
           <TextBlock Text="{Binding Status}" Foreground="#C8D9CB" FontSize="12" Margin="0,6,0,0" MaxHeight="36" TextTrimming="CharacterEllipsis"/>
         </StackPanel>
-        <Button x:Name="CancelButton" Grid.Column="1" Content="Cancel &amp; restore" Click="Cancel_Click" IsEnabled="{Binding Busy}" Background="Transparent" Foreground="#ECF4EC" BorderBrush="#59766B" VerticalAlignment="Center" Margin="0,0,12,0"/>
+        <Button x:Name="CancelButton" Grid.Column="1" Content="Cancel &amp; restore" Click="Cancel_Click" IsEnabled="{Binding ExportRunning}" Background="Transparent" Foreground="#ECF4EC" BorderBrush="#59766B" VerticalAlignment="Center" Margin="0,0,12,0"/>
         <Button Grid.Column="2" Content="Export selected" Click="Export_Click" IsEnabled="{Binding CanExport}" Style="{StaticResource PrimaryButton}" Padding="24,13" VerticalAlignment="Center" MinWidth="164"/>
       </Grid>
     </Border>
