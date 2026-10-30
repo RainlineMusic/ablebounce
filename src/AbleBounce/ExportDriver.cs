@@ -65,45 +65,7 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
         }
         throw new InvalidOperationException("Export Audio/Video did not match the calibrated dialog. Close other dialogs and recalibrate.");
     }
-    private static AutomationElement? FileDialog(int process)
-    {
-        var windows = AutomationElement.RootElement.FindAll(TreeScope.Children,
-            new PropertyCondition(AutomationElement.ProcessIdProperty, process));
-        foreach (AutomationElement w in windows)
-        {
-            if (w.Current.ClassName == "#32770" && w.Current.IsEnabled && !w.Current.IsOffscreen)
-            {
-                // Common Item Dialog host IDs are independent of Windows UI
-                // language. Do not identify arbitrary plug-in login edits by
-                // their generic numeric control ID alone.
-                var host = w.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.AutomationIdProperty, "FileNameControlHost"));
-                if (host != null) return w;
-                // Modern common file dialogs expose a File name combo/edit.
-                var edit = w.FindFirst(TreeScope.Descendants, new AndCondition(
-                    new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit),
-                    new OrCondition(new PropertyCondition(AutomationElement.NameProperty, "File name:"),
-                                    new PropertyCondition(AutomationElement.NameProperty, "File name"))));
-                if (edit != null) return w;
-            }
-        }
-        return null;
-    }
-    private static AutomationElement? FilenameField(AutomationElement dialog)
-    {
-        var host = dialog.FindFirst(TreeScope.Descendants,
-            new PropertyCondition(AutomationElement.AutomationIdProperty, "FileNameControlHost"));
-        if (host != null)
-        {
-            if (host.TryGetCurrentPattern(ValuePattern.Pattern, out _)) return host;
-            var edit = host.FindFirst(TreeScope.Descendants,
-                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit));
-            if (edit != null) return edit;
-        }
-        return dialog.FindFirst(TreeScope.Descendants, new AndCondition(
-            new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit),
-            new OrCondition(new PropertyCondition(AutomationElement.NameProperty, "File name:"),
-                            new PropertyCondition(AutomationElement.NameProperty, "File name"))));
-    }
+    private static AutomationElement? FileDialog(int process) => WindowsSaveDialog.Find(process);
     private async Task SaveDialog(string path, CancellationToken ct)
     {
         var end = DateTime.UtcNow.AddSeconds(15);
@@ -112,17 +74,7 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
         { ct.ThrowIfCancellationRequested(); Guard(); dialog = FileDialog(Live.Id); if (dialog == null) await Task.Delay(200, ct); }
         if (dialog == null) throw new InvalidOperationException("The Windows Save dialog was not detected. No filename was entered.");
         Guard();
-        var field = FilenameField(dialog);
-        if (field == null || field.Current.ProcessId != Live.Id || !field.TryGetCurrentPattern(ValuePattern.Pattern, out var valuePattern))
-            throw new InvalidOperationException("Cannot verify the Save dialog filename. Leave Live open and retry.");
-        var value = (ValuePattern)valuePattern;
-        if (value.Current.IsReadOnly) throw new InvalidOperationException("The Save dialog filename field is read-only.");
-        field.SetFocus(); value.SetValue(path);
-        await Task.Delay(150, ct);
-        var entered = value.Current.Value;
-        if (!string.Equals(entered, path, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Save dialog filename readback did not match.");
-        Guard(); Native.Key(Native.Enter);
+        WindowsSaveDialog.Submit(dialog, Live.Id, path);
     }
     public async Task<string> CreateWorkingCopy(SessionInfo session, CancellationToken ct)
     {

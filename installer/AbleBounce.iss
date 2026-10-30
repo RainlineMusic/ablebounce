@@ -1,4 +1,4 @@
-#define AppVersion "0.1.1"
+#define AppVersion "0.1.2"
 [Setup]
 AppId={{5B40FCEB-6F41-45B0-8F40-C7589C647C7D}
 AppName=AbleBounce
@@ -11,7 +11,7 @@ PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=..\artifacts\installer
-OutputBaseFilename=AbleBounce-Setup-0.1.1-win-x64
+OutputBaseFilename=AbleBounce-Setup-0.1.2-win-x64
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern

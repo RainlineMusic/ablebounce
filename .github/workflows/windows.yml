@@ -23,6 +23,7 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - name: Build and run desktop core checks
+        timeout-minutes: 3
         shell: pwsh
         run: dotnet run --project tests/AbleBounce.Tests/AbleBounce.Tests.csproj -c Release
       - name: Publish portable application

@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using System.Windows.Automation;
 using AbleBounce;
 
 int checks = 0;
@@ -31,6 +32,41 @@ try
     try { new ExportProfile { Version = "12.4.6" }.Validate(new SessionInfo { Version = "12.4.5" }); }
     catch (InvalidOperationException) { calibrationRejected = true; }
     Check(calibrationRejected, "Calibration must remain specific to the exact Live patch");
+    async Task CheckNativeSaveDialog(string directory, string filename)
+    {
+        Directory.CreateDirectory(directory);
+        var expected = Path.Combine(directory, filename);
+        var finished = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var prompt = new Microsoft.Win32.SaveFileDialog
+                {
+                    InitialDirectory = directory, FileName = "initial.als", DefaultExt = ".als",
+                    Filter = "Ableton Live Set|*.als", CheckPathExists = true,
+                    Title = "AbleBounce save regression"
+                };
+                finished.TrySetResult(prompt.ShowDialog() == true ? prompt.FileName : "");
+            }
+            catch (Exception ex) { finished.TrySetException(ex); }
+        }) { IsBackground = true };
+        thread.SetApartmentState(ApartmentState.STA); thread.Start();
+        var process = Environment.ProcessId;
+        AutomationElement? dialog = null;
+        var deadline = DateTime.UtcNow.AddSeconds(20);
+        while (DateTime.UtcNow < deadline && dialog == null && !finished.Task.IsCompleted)
+        { dialog = WindowsSaveDialog.Find(process); if (dialog == null) await Task.Delay(100); }
+        Check(dialog != null, "Native Windows Save dialog was not recognised");
+        var sentinel = Path.Combine(directory, "existing.als"); File.WriteAllText(sentinel, "original");
+        Reject(() => WindowsSaveDialog.Submit(dialog!, process, sentinel), "Save helper accepted an overwrite");
+        Check(File.ReadAllText(sentinel) == "original", "Existing source was modified");
+        WindowsSaveDialog.Submit(dialog!, process, expected);
+        var selected = await finished.Task.WaitAsync(TimeSpan.FromSeconds(20));
+        Check(string.Equals(selected, expected, StringComparison.OrdinalIgnoreCase), "Native Save path did not match");
+    }
+    await CheckNativeSaveDialog(Path.Combine(temp, "Native save"), "Working copy.als");
+    await CheckNativeSaveDialog(Path.Combine(temp, "Проект с пробелами"), "Вокал__AbleBounce_тест.als");
     string Wav(int bits, int format = 1, int channels = 2, int frames = 100)
     {
         var path = Path.Combine(temp, Guid.NewGuid() + ".wav");
