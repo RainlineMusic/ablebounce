@@ -119,7 +119,7 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
         foreach (var track in source.Tracks.Where(t => !t.Master))
         {
             int index = Array.FindIndex(track.Return ? returns : tracks, t => t.Key == track.Key) + 1;
-            if (key == Canonical(track.Name) || (!track.Return &&
+            if (key == Canonical(track.Name) || key == Canonical(track.Name.Replace("#", track.Return && index <= 26 ? ((char)('A' + index - 1)).ToString() : index.ToString())) || (!track.Return &&
                 (key == Canonical(index + "-" + track.Name) || key == Canonical(index.ToString("D3") + "-" + track.Name) || key == Canonical(index.ToString("D2") + "-" + track.Name)))
                 || (track.Return && index <= 26 && key == Canonical(((char)('A' + index - 1)).ToString() + "-" + track.Name)))
                 matches.Add(track);

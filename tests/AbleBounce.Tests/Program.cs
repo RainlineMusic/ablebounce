@@ -155,6 +155,8 @@ try
         new TrackInfo { Key = "t:1", Name = "FILLS" },
         new TrackInfo { Key = "t:2", Name = "FILLS" },
         new TrackInfo { Key = "r:0", Name = "A-Reverb", Return = true }] };
+    var hashSession = new SessionInfo { Tracks = [new TrackInfo { Key = "t:0", Name = "Kick #" }] };
+    Check(BounceQueue.MatchNativeTrack("glucose Kick 1.wav", hashSession)?.Key == "t:0", "A trailing track placeholder could not be matched");
     var folderRoot = Path.Combine(temp, "FolderDelivery");
     var stage = Path.Combine(folderRoot, "Staging", "08", "000"); Directory.CreateDirectory(stage);
     var stems = new[] { "glucose 1-Drums.wav", "glucose 2-FILLS.wav", "glucose 3-FILLS.wav", "glucose A-Reverb.wav" }
