@@ -120,7 +120,12 @@ public partial class MainWindow : Window
                 var wizard = new CalibrationWindow(_session.Version);
                 success = wizard.ShowDialog() == true;
             }
-            if (success) _vm.AddLog("Calibration saved. Bit depth stays as configured in Live.");
+            if (success)
+            {
+                await Native.Focus(live, CancellationToken.None);
+                if (Native.TryExportWindow(live.Id, out _)) { Native.Key(Native.Esc); await Task.Delay(200); }
+                _vm.AddLog("Calibration saved. Ready to export; bit depth stays as configured in Live.");
+            }
         }
         catch (Exception ex) { ShowError(ex); }
         finally { WindowState = WindowState.Normal; _vm.Busy = false; Activate(); }
