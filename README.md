@@ -1,4 +1,12 @@
-# glucose 0.2.7
+# glucose 0.2.8
+
+Multitrack files are split into Groups, Tracks and Returns again; a native Main
+reference, when present, is retained in References. Native track numbers take
+priority when matching duplicated names. Filenames omit # and avoid repeating
+its expanded track number. Existing output files are never overwritten.
+Staging is removed after the entire batch is delivered and Live restored. On
+failure/cancellation it is retained with unfinished files for recovery.
+
 
 Locked WAV files are treated as an export still in progress, even if Live's
 bridge reports idle. Completion requires an unchanged file set, lengths and

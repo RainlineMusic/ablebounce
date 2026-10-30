@@ -147,6 +147,23 @@ try
     Check(BounceQueue.MatchNativeTrack("glucose_002-Вокал.wav", nativeSession)?.Key == "t:1", "Native numbered Unicode matching failed");
     Check(BounceQueue.MatchNativeTrack("glucose Main.wav", nativeSession) == null, "Native Main reference not recognised");
     Reject(() => BounceQueue.MatchNativeTrack("glucose Unknown.wav", nativeSession), "Unmatched file accepted");
+    Check(Storage.SafeName("Song #").Contains('#') == false, "Filename retained #");
+    Check(BounceQueue.TrackFileLabel("#-vox vibes kupl1", 112) == "vox vibes kupl1", "Track placeholder leaked into filename");
+    Check(BounceQueue.TrackFileLabel("112-vox vibes kupl1", 112) == "vox vibes kupl1", "Expanded track number was duplicated");
+    var folderSession = new SessionInfo { Tracks = [
+        new TrackInfo { Key = "t:0", Name = "#-Drums", Group = true },
+        new TrackInfo { Key = "t:1", Name = "FILLS" },
+        new TrackInfo { Key = "t:2", Name = "FILLS" },
+        new TrackInfo { Key = "r:0", Name = "A-Reverb", Return = true }] };
+    var folderRoot = Path.Combine(temp, "FolderDelivery");
+    var stage = Path.Combine(folderRoot, "Staging", "08", "000"); Directory.CreateDirectory(stage);
+    var stems = new[] { "glucose 1-Drums.wav", "glucose 2-FILLS.wav", "glucose 3-FILLS.wav", "glucose A-Reverb.wav" }
+        .Select(name => { var path = Path.Combine(stage, name); File.WriteAllText(path, "delivery fixture"); return path; }).ToList();
+    var paths = BounceQueue.Deliver(8, stems, folderRoot, folderSession, "Song", []);
+    Check(paths.Contains(Path.Combine(folderRoot, "Multitrack", "Groups", "Song_001_Drums.wav")), "Group output name/category failed");
+    Check(paths.Count(p => p.Contains(Path.Combine("Multitrack", "Tracks"))) == 2, "Duplicate track names were not categorised");
+    Check(paths.Any(p => p.Contains(Path.Combine("Multitrack", "Returns"))), "Return was not categorised");
+    Check(paths.All(File.Exists) && paths.Distinct(StringComparer.OrdinalIgnoreCase).Count() == 4, "Delivery overwrote or lost files");
     var library = Path.Combine(temp, "User Library"); Directory.CreateDirectory(library);
     BridgeClient.Install(library);
     var script = Path.Combine(library, "Remote Scripts", "AbleBounce");

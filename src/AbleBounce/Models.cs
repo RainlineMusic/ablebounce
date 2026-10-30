@@ -166,7 +166,7 @@ public static class Storage
     public static string SafeName(string name)
     {
         var bad = Path.GetInvalidFileNameChars();
-        var result = string.Concat(name.Select(c => bad.Contains(c) || char.IsControl(c) ? '_' : c)).Trim().TrimEnd('.');
+        var result = string.Concat(name.Replace("#", "").Select(c => bad.Contains(c) || char.IsControl(c) ? '_' : c)).Trim().TrimEnd('.');
         if (result.Length > 90) result = result[..90];
         return string.IsNullOrWhiteSpace(result) ? "Untitled" : result;
     }

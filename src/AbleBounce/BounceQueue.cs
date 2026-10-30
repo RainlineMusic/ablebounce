@@ -63,7 +63,7 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
                 jobState(job, i + 1 < passes.Length && passes[i + 1].Job == job ? "Rendering" : "Done");
                 File.WriteAllText(Path.Combine(root, "manifest.json"), JsonSerializer.Serialize(new
                 {
-                    application = "glucose 0.2.7", live_version = source.Version, source_set = source.Path, track_title = title,
+                    application = "glucose 0.2.8", live_version = source.Version, source_set = source.Path, track_title = title,
                     bit_depth = range!.Bits, roles,
                     range = "Reused Live Export dialog start/length; sample rate set in Live", deliveries = delivered,
                     multitrack_note = "Tracks are pre-parent-bus, post-fader. Groups/Returns are alternatives; do not sum every group with all its children.",
@@ -89,6 +89,9 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
                 throw new InvalidOperationException("Restoration needs attention: " + restoreError.Message + " Do not save the modified current Set. Cancel its render/dialog and use Restore Set. Original error: " + (originalError?.Message ?? "none"), restoreError);
             }
         }
+        // Only a fully delivered, restored batch may discard its temporary files.
+        var stagingRoot = Path.Combine(root, "Staging");
+        if (Directory.Exists(stagingRoot)) Directory.Delete(stagingRoot, recursive: true);
         return root;
     }
 
@@ -102,6 +105,16 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
         var key = Canonical(remainder);
         var tracks = source.Tracks.Where(t => !t.Master && !t.Return).ToArray();
         var returns = source.Tracks.Where(t => t.Return).ToArray();
+        // Live expands # to the project track number. Prefer that explicit
+        // native number before name-only matching (duplicate names are normal).
+        var numbered = Regex.Match(remainder, @"^(\d+)[ ._\-]+(.+)$");
+        if (numbered.Success && int.TryParse(numbered.Groups[1].Value, out int number) && number > 0 && number <= tracks.Length)
+        {
+            var track = tracks[number - 1];
+            var original = track.Name.Replace("#", "").Trim(' ', '-', '_', '.');
+            if (key == Canonical(track.Name.Replace("#", number.ToString()))
+                || key == Canonical(track.Name) || Canonical(numbered.Groups[2].Value) == Canonical(original)) return track;
+        }
         var matches = new List<TrackInfo>();
         foreach (var track in source.Tracks.Where(t => !t.Master))
         {
@@ -118,75 +131,71 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
         throw new IOException("Cannot uniquely match native export file to a track: " + name + ". Staging files were kept.");
     }
 
-    private static List<string> Deliver(int job, List<string> files, string root, SessionInfo source, string title, string[] dryKeys)
+    internal static string TrackFileLabel(string name, int ordinal)
     {
-        var result = new List<string>();
+        var clean = name.Replace("#", "").Trim(' ', '_', '-', '.');
+        var number = Regex.Match(clean, @"^(\d+)[ ._\-]+(.+)$");
+        if (number.Success && int.TryParse(number.Groups[1].Value, out var parsed) && parsed == ordinal)
+            clean = number.Groups[2].Value;
+        return Storage.SafeName(clean);
+    }
+
+    internal static List<string> Deliver(int job, List<string> files, string root, SessionInfo source, string title, string[] dryKeys)
+    {
         var staging = Path.GetDirectoryName(files[0])!;
+        var planned = new List<(string Source, string Target)>();
+        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var tracks = source.Tracks.Where(t => !t.Return && !t.Master).ToArray();
+        var returns = source.Tracks.Where(t => t.Return).ToArray();
+        string Target(string folder, string stem)
+        {
+            var path = Path.Combine(folder, stem + ".wav"); int duplicate = 2;
+            while (File.Exists(path) || !used.Add(path)) path = Path.Combine(folder, stem + "_" + duplicate++ + ".wav");
+            return path;
+        }
         if (job == 9)
         {
             var track = source.Tracks.Single(t => t.Key == dryKeys.Single());
-            int ordinal = source.Tracks.Where(t => !t.Return && !t.Master).Select(t => t.Key).ToList().IndexOf(track.Key) + 1;
+            int ordinal = Array.FindIndex(tracks, t => t.Key == track.Key) + 1;
             var folder = Path.Combine(root, "Multitrack", "Dry Tracks");
-            Directory.CreateDirectory(folder);
-            var target = Path.Combine(folder, $"{title}_{ordinal:D3}_{Storage.SafeName(track.Name)}.wav");
-            File.Move(files.Single(), target); result.Add(target);
-            Directory.Delete(staging); return result;
+            planned.Add((files.Single(), Target(folder, $"{title}_{ordinal:D3}_{TrackFileLabel(track.Name, ordinal)}")));
         }
-        if (job == 8)
+        else if (job == 8)
         {
-            // Native All Individual Tracks already assigns unique filenames.
-            // Preserve those names; repeated track names need no guessed mapping.
-            var folder = Path.Combine(root, "Multitrack", "Stems");
-            Directory.CreateDirectory(folder);
-            int fileNumber = 0;
             foreach (var file in files.OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase))
             {
-                fileNumber++;
-                var native = Path.GetFileNameWithoutExtension(file);
-                var suffix = native.StartsWith("glucose", StringComparison.OrdinalIgnoreCase) ? native[7..] : "_" + native;
-                var target = Path.Combine(folder, title + "_" + fileNumber.ToString("D3") + "_" + Storage.SafeName(suffix.TrimStart(' ', '_', '-', '.')) + ".wav");
-                File.Move(file, target); result.Add(target);
+                TrackInfo? track;
+                try { track = MatchNativeTrack(file, source); }
+                catch (IOException)
+                {
+                    // Name-only duplicates can still be categorised when every
+                    // candidate belongs to the same kind. Never guess group vs track.
+                    static string Canonical(string name) => new(name.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
+                    var native = Path.GetFileNameWithoutExtension(file);
+                    var label = native.StartsWith("glucose", StringComparison.OrdinalIgnoreCase) ? native[7..].Trim(' ', '-', '_', '.') : native;
+                    var candidates = source.Tracks.Where(t => !t.Master && Canonical(t.Name) == Canonical(label)).ToArray();
+                    if (candidates.Length < 2 || candidates.Select(t => (t.Group, t.Return)).Distinct().Count() != 1) throw;
+                    track = candidates[0];
+                }
+                if (track == null)
+                {
+                    planned.Add((file, Target(Path.Combine(root, "Multitrack", "References"), title + "_MAIN")));
+                    continue;
+                }
+                int ordinal = Array.FindIndex(track.Return ? returns : tracks, t => t.Key == track.Key) + 1;
+                var folder = Path.Combine(root, "Multitrack", track.Return ? "Returns" : track.Group ? "Groups" : "Tracks");
+                var prefix = track.Return ? "R" + ordinal.ToString("D2") : ordinal.ToString("D3");
+                planned.Add((file, Target(folder, title + "_" + prefix + "_" + TrackFileLabel(track.Name, ordinal))));
             }
-            if (!Directory.EnumerateFileSystemEntries(staging).Any()) Directory.Delete(staging);
-            return result;
         }
-        if (job != 8 && job != 9)
+        else planned.Add((files.Single(), Target(Path.Combine(root, "Mixes"), title + "_" + FileNames[job])));
+        // Resolve every category and collision before moving the first file.
+        foreach (var item in planned)
         {
-            var folder = Path.Combine(root, job == 9 ? "Dry_Vocal" : "Mixes");
-            Directory.CreateDirectory(folder);
-            string final = Path.Combine(folder, $"{title}_{FileNames[job]}.wav");
-            File.Move(files.Single(), final); result.Add(final);
-        }
-        else
-        {
-            var mapped = new Dictionary<string, string>();
-            var pending = new List<(string Source, string Target)>();
-            var returns = source.Tracks.Where(t => t.Return).ToArray();
-            var tracks = source.Tracks.Where(t => !t.Return && !t.Master).ToArray();
-            int unlabelled = 0;
-            foreach (var file in files)
-            {
-                var track = MatchNativeTrack(file, source);
-                if (track == null) { unlabelled++; continue; } // explicitly verified Main reference
-                bool isReturn = track.Return;
-                var list = isReturn ? returns : tracks;
-                int index = Array.FindIndex(list, t => t.Key == track.Key);
-                if (!mapped.TryAdd(track.Key, file)) throw new IOException("Duplicate exported track identifier: " + track.Name);
-                if (job == 9 && !dryKeys.Contains(track.Key)) continue;
-                var folder = job == 9 ? Path.Combine(root, "Multitrack", "Dry Tracks") : Path.Combine(root, "Multitrack", isReturn ? "Returns" : track.Group ? "Groups" : "Tracks");
-                var number = isReturn ? "R" + (index + 1).ToString("D2") : (index + 1).ToString("D3");
-                pending.Add((file, Path.Combine(folder, title + "_" + number + "_" + Storage.SafeName(track.Name) + ".wav")));
-            }
-            var missing = source.Tracks.Where(t => t.Audio && !t.Master && (job != 9 || dryKeys.Contains(t.Key)) && !mapped.ContainsKey(t.Key)).Select(t => t.Name).ToArray();
-            if (missing.Length > 0 || unlabelled > 1)
-                throw new IOException("Multitrack export could not be matched safely. Missing: " + string.Join(", ", missing) + ". Staging files were retained.");
-            // Validate all identifiers before moving any file.
-            foreach (var item in pending)
-            { Directory.CreateDirectory(Path.GetDirectoryName(item.Target)!); File.Move(item.Source, item.Target); result.Add(item.Target); }
-            foreach (var file in Directory.GetFiles(staging, "*.wav")) File.Delete(file); // unused native Main reference only
+            Directory.CreateDirectory(Path.GetDirectoryName(item.Target)!);
+            File.Move(item.Source, item.Target);
         }
         if (!Directory.EnumerateFileSystemEntries(staging).Any()) Directory.Delete(staging);
-        return result;
+        return planned.Select(p => p.Target).ToList();
     }
 }
-
