@@ -304,6 +304,18 @@ class EngineTests(unittest.TestCase):
         self.song.tracks[2].output_routing_type = Route("Unreviewed Bus")
         with self.assertRaises(ab.BounceError): self.begin([2])
 
+    def test_main_destination_is_not_named_vocal_track(self):
+        for destination in ("Main", "Master"):
+            with self.subTest(destination=destination):
+                self.setUp()
+                self.song.tracks[4].name = destination
+                self.song.tracks[0].output_routing_type = Route(destination)
+                baseline = self.snapshot()
+                token = self.begin([2])
+                self.engine.prepare(2, token)
+                self.engine.restore()
+                self.assertEqual(baseline, self.snapshot())
+
     def test_instrument_feeding_vocal_bus_rejected(self):
         self.song.tracks[0].output_routing_type = Route(self.song.tracks[1].name)
         with self.assertRaises(ab.BounceError): self.begin([2, 7])

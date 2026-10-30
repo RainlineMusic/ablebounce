@@ -251,7 +251,9 @@ class Engine:
             for t in self.tracks() + list(self.song.return_tracks):
                 role = self.effective_role(t) if t in self.tracks() else "Instrument"
                 route = self.routing_name(t.output_routing_type)
-                if route in vocal_bus_names and role not in ("Lead", "Backing"):
+                # Main/Master are built-in destinations, even when a vocal
+                # track has the same display name. They are not a vocal bus.
+                if route not in ("Main", "Master") and route in vocal_bus_names and role not in ("Lead", "Backing"):
                     raise BounceError("Non-vocal audio feeds a vocal bus: %s → %s. Separate that routing before exporting vocal variants." % (t.name, route))
                 # Pre-/post-FX audio taps can bypass Track Activator. Reject a
                 # non-vocal receiver of a vocal source instead of leaking voice.
