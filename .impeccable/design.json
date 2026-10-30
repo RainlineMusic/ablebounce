@@ -1,52 +1,8 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-30T10:50:07.460227+00:00",
-  "title": "Design System: AbleBounce",
+  "generatedAt": "2026-10-30T00:00:00+00:00",
+  "title": "AbleBounce plain Windows prototype",
   "extensions": {
-    "colorMeta": {
-      "deep-green": {
-        "role": "primary",
-        "displayName": "Deep Green"
-      },
-      "acid-yellow": {
-        "role": "primary",
-        "displayName": "Acid Yellow"
-      },
-      "canvas": {
-        "role": "neutral",
-        "displayName": "Ivory Canvas"
-      },
-      "lead-text": {
-        "role": "secondary",
-        "displayName": "Dark Lead Coral"
-      },
-      "backing-text": {
-        "role": "secondary",
-        "displayName": "Backing Green"
-      }
-    },
-    "typographyMeta": {
-      "headline": {
-        "displayName": "Project headline",
-        "purpose": "Current Set title."
-      },
-      "title": {
-        "displayName": "Pane title",
-        "purpose": "Track roles and export settings."
-      },
-      "body": {
-        "displayName": "Working text",
-        "purpose": "Delivery titles and standard controls."
-      },
-      "label": {
-        "displayName": "Supporting label",
-        "purpose": "Field labels and explanations."
-      },
-      "caption": {
-        "displayName": "Compact metadata",
-        "purpose": "Track detail and vocal/master state."
-      }
-    },
     "native": {
       "platform": "Windows",
       "framework": "WPF",
@@ -54,95 +10,55 @@
       "sources": [
         "src/AbleBounce/App.xaml",
         "src/AbleBounce/MainWindow.xaml",
-        "src/AbleBounce/Models.cs"
+        "src/AbleBounce/ExportProfile.cs"
       ],
       "window": {
         "default": {
-          "width": 1280,
-          "height": 860
+          "width": 1100,
+          "height": 780
         },
         "minimum": {
-          "width": 1060,
-          "height": 740
+          "width": 900,
+          "height": 650
         }
       },
       "layout": {
-        "headerHeight": 78,
-        "footerHeight": 104,
-        "trackPaneWidth": 290,
-        "inspectorWidth": 250,
-        "deliveryColumn": "flexible"
+        "outerMargin": 10,
+        "gridGap": 8,
+        "trackToVariantsRatio": "2:3"
       },
+      "applicationResources": "Empty; platform WPF control defaults",
+      "background": "SystemColors.ControlBrush",
+      "customPalette": false,
+      "customControlTemplates": false,
       "customShadows": false,
       "customMotionTokens": false,
-      "states": {
-        "buttonHover": "Surface opacity 0.78",
-        "buttonKeyboardFocus": "2-DIP #39725F surface border",
-        "buttonDisabled": "Surface opacity 0.42",
-        "checkboxKeyboardFocus": "2-DIP #183B32 box border",
-        "checkboxDisabled": "Opacity 0.45"
-      },
-      "componentSources": [
-        {
-          "name": "Primary button",
-          "refersTo": "button-primary",
-          "resource": "PrimaryButton",
-          "source": "src/AbleBounce/App.xaml"
-        },
-        {
-          "name": "Secondary button",
-          "refersTo": "button-secondary",
-          "resource": "Implicit Button style",
-          "source": "src/AbleBounce/App.xaml"
-        },
-        {
-          "name": "Text field",
-          "refersTo": "input",
-          "resource": "Implicit TextBox style",
-          "source": "src/AbleBounce/App.xaml"
-        },
-        {
-          "name": "Selected delivery row",
-          "refersTo": "delivery-row-selected",
-          "resource": "Deliveries ItemTemplate",
-          "source": "src/AbleBounce/MainWindow.xaml"
-        },
-        {
-          "name": "Selected checkbox",
-          "refersTo": "checkbox-selected",
-          "resource": "Implicit CheckBox style",
-          "source": "src/AbleBounce/App.xaml"
-        }
-      ],
-      "previewPolicy": "Native WPF component sources are recorded instead of fabricated HTML/CSS equivalents. No unsupported tonal ramps or web breakpoints are synthesized."
+      "previewPolicy": "Review fresh Windows native captures. Historical styled images are not evidence of this UI."
     }
   },
   "components": [],
   "narrative": {
-    "overview": "AbleBounce is a bright, compact session-delivery workbench. Deep green anchors the shell, acid yellow identifies actionable selection, and ivory keeps long working sessions quiet. Native Windows controls and English task language make the application feel like a practical companion to Live.",
+    "overview": "Plain Windows prototype with standard uncolored native WPF controls.",
     "keyCharacteristics": [
-      "Persistent context, compact delivery rows and a visible primary action.",
-      "Flat surfaces, restrained rounding and strong text hierarchy.",
-      "Honest connection, disabled and Demo states."
+      "Install, Connect and Calibrate at the top.",
+      "Native DataGrids for roles and nine export variants.",
+      "Bit depth, output folder, export, cancellation, restoration and activity controls."
     ],
     "rules": [
       {
-        "name": "The State Has Words Rule",
-        "body": "Pair color with a checkbox, role label, state label or explicit connection text.",
-        "section": "colors"
+        "name": "User-managed Live settings",
+        "body": "Only source, bit depth and Export are automated; other export switches are neither changed nor verified.",
+        "section": "behavior"
       }
     ],
     "dos": [
-      "Do keep the primary export action visible as content scrolls.",
-      "Do pair state colors with explicit labels or control state.",
-      "Do preserve the native Segoe UI hierarchy and keyboard behavior.",
-      "Do identify synthetic content as Demo and show connection state plainly."
+      "Keep native control appearance and keyboard behavior.",
+      "Describe connection, job and recovery states with words.",
+      "Label synthetic Demo content."
     ],
     "donts": [
-      "Don't replace this working application with dashboard metrics, decorative meters or marketing illustrations.",
-      "Don't infer role solely from a track-color marker.",
-      "Don't add continuous animation or decorative elevation to the flat shell.",
-      "Don't present visual review or Demo behavior as evidence of Live integration."
+      "Do not add custom button colors, branding, decorative chrome or motion.",
+      "Do not treat demo captures or CI success as Live end-to-end validation."
     ]
   }
 }

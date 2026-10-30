@@ -1,27 +1,36 @@
-# AbleBounce
+# AbleBounce 0.1.3
 
-Windows desktop companion for Ableton Live 12.4.x, English UI in both applications.
-The user selects any of nine delivery variants: original mix; instrumental;
-instrumental without master effects; full mix without master effects; backing
-vocals without lead, without master; backing vocals without lead, with master;
-full mix with lead reduced by 6 dB; post-fader multitrack plus separate groups and
-returns, excluding main processing; dry lead vocal sum.
+Plain Windows prototype for Ableton Live 12.4.x, with an English UI in both
+applications. Standard WPF controls provide Install, Connect and Calibrate,
+track-role assignment, nine selectable export variants, bit depth, output folder,
+Export selected, Cancel & restore, Restore working Set and Activity.
 
-Track roles may be assigned to multiple tracks or groups. Name-based suggestions
-are editable; uncertain audio tracks require a decision before vocal-dependent
-jobs. Group and child selections must never be attenuated twice. Original mute,
-solo, automation overrides and device activation states are authoritative.
+The nine variants are full mix; instrumental; instrumental without Main devices;
+full mix without Main devices; backing mix without Main devices; backing mix;
+full mix with lead reduced by 6 dB; mixed multitrack with groups and returns;
+and dry lead sum. Multiple tracks/groups may have Lead or Backing roles. Review editable
+name-based role suggestions before exporting. Group and child selections
+must not be attenuated twice. Original mute and device states remain authoritative.
 
-Native Live renders all audio. Python Remote Script communicates on loopback;
-it executes Live API operations only on Live's control-surface callback thread.
-No cloud audio processing. No physical MIDI port or Max for Live dependency.
-Windows export automation requires an unlocked desktop and a calibrated English
-Export dialog. It must stop rather than guess when its verification fails.
+Native Live renders all audio. The loopback Python Remote Script runs Live API
+operations on Live’s control-surface callback thread. No cloud audio processing,
+physical MIDI port, separate Python installation or Max for Live is required.
 
-Always create a sibling working .als via Live's Save As before mutation. Leave
-the original untouched. Restore the working Set after every job, including
-cancellation; never restore while Live is still rendering. Unsupported routing,
-frozen dry vocals and controlled/unwritable parameters fail preflight.
+Export automation controls only render source (Main/All Individual Tracks),
+bit depth (16/24/32-bit float) and Export. Six F8 captures record their visual
+states. Calibration is tied to the exact Live patch, window size and display DPI;
+keep the theme and dialog position unchanged. The desktop must stay unlocked.
 
-This repository can be built on Windows CI. Actual Live integration requires a
-licensed Windows Live installation; CI does not establish Live compatibility.
+The user sets WAV/stereo, PCM On, No Dither, Normalize/Mono/Loop/MP3/Include Return
+and Main Effects Off, plus sample rate and render start/length including tails in
+Live. These switches are not changed or verified by AbleBounce. WAV structure and
+format validation cannot establish the musical correctness of an export.
+
+Create a unique sibling working .als with Live Save As before bridge mutation.
+Restore the working Set after each job and cancellation; restoration waits for
+rendering and modal dialogs to stop. Leave the original untouched. Unsupported
+routing, frozen dry vocals and unwritable parameters fail preflight.
+
+The 0.1.2 Windows Save-dialog fix and real Windows dialog tests remain in 0.1.3.
+The app has not been tested end to end in a licensed Live 12.4.x installation.
+Build, bridge-unit-test and demo results do not establish Live compatibility.

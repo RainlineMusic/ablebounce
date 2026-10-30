@@ -4,8 +4,8 @@ A Windows session-delivery companion for **Ableton Live 12.4.x**, with an Englis
 interface. Native Live renders the audio. AbleBounce prepares track/device states,
 drives Live's English Export Audio/Video dialog and organises the results.
 
-**Status: 0.1 integration preview.** Bridge state logic has automated regression
-coverage. Windows builds and design captures run in GitHub Actions. This project
+**Status: 0.1.3 integration preview.** Bridge state logic has automated regression
+coverage. Windows builds and native WPF demo captures run in GitHub Actions. This project
 has not yet been end-to-end tested in a licensed Live 12.4.x installation. A
 successful CI build does not establish that the export dialog calibration works
 on your machine. Test a short working copy before a full delivery.
@@ -17,13 +17,11 @@ choose a successful run and download one of its artifacts:
 
 - **AbleBounce-Setup-win-x64** — EXE installer, current Windows user only.
 - **AbleBounce-portable-win-x64** — self-contained application and instructions.
-- **AbleBounce-design-preview** — actual WPF design capture using labelled demo data.
+- **AbleBounce-design-preview** — native WPF capture using labelled demo data; it is not a Live integration test.
 
 The application includes .NET. No separate Python, Max for Live, virtual MIDI
 driver or physical controller is required. Live's built-in Python hosts the
 Remote Script. Install the included bridge using the button inside the app.
-
-![AbleBounce native Windows interface with labelled demo data](docs/images/ablebounce.png)
 
 ## Delivery variants
 
@@ -49,23 +47,24 @@ Connection accepts numeric patch releases in the **12.4.x** branch, including **
 
 Read [QUICK_START.md](docs/QUICK_START.md) for the complete procedure.
 
-1. Open AbleBounce and choose **Install Live bridge…**. Select the actual Ableton
+1. Open AbleBounce and choose **Install**. Select the actual Ableton
    **User Library** folder.
 2. Restart Live. In **Settings → Link, Tempo & MIDI**, select **AbleBounce** in a
    free Control Surface slot. Set Input and Output to **None**.
-3. Open a saved Arrangement Set, stop playback and click **Connect to Live**.
+3. Open a saved Arrangement Set, stop playback and click **Connect**.
 4. Review role suggestions. Any number of tracks or groups can be Lead/Backing.
    Children may inherit their parent role. Mark other audio tracks Instrument.
 5. Prepare Live's export dialog as described in the calibration prompt. Set
    the **sample rate, start and length, including effect tails**, in Live.
-6. Choose **Calibrate export…**. Capture the requested control positions with
-   **F8**, then close the Live export dialog. This is required once for each
-   window geometry/theme/display scale/Live version.
+6. Choose **Calibrate**. Capture the requested control positions with
+   **F8** six times: source All Individual Tracks, bit depth 24, Export, bit
+   depth 16, bit depth 32, source Main. Then close the Live export dialog.
+   Recalibrate for changes to window geometry, theme, display scale or exact Live patch.
 7. Choose variants, bit depth (16/24/32-bit float) and output folder, then export.
 
 The UI must remain visible and the desktop unlocked. Do not interact with Live
-while AbleBounce controls it. A mismatch, unsupported routing or readback failure
-stops the batch instead of continuing with guessed settings.
+while AbleBounce controls it. A source/bit-depth calibration mismatch, unsupported
+routing or readback failure stops the batch. Other export switches are user-managed as described below.
 
 ## What the audio options mean
 
@@ -88,10 +87,14 @@ stops the batch instead of continuing with guessed settings.
   route directly to Main to bypass parent groups. Other tracks and Returns are
   muted and vocal sends set to zero. Edits, Warp, Clip Gain, faders and pan remain;
   Main devices are bypassed, Main fader remains. Printed effects cannot be undone.
-- **WAV stereo, No Dither, Normalize off.** Bit depth is set by the app and verified
-  in the resulting WAV header. Sample rate and range are configured in Live and
-  verified for consistency across outputs. MP3 is off. RIFF WAV files over 4 GB
-  are currently rejected rather than silently accepted as malformed.
+- **Set manually in Live:** WAV, stereo, Encode PCM On and No Dither; Normalize,
+  Convert to Mono, Render as Loop, Encode MP3 and Include Return and Main Effects
+  Off. AbleBounce does not change or verify these switches. Set sample rate,
+  Render Start and Render Length (including tails) in Live. The app automates only
+  render source, bit depth and Export. WAV headers are checked for stereo, chosen
+  bit depth and PCM/float encoding; sample rate and frame counts must agree across
+  outputs. This does not verify the intended range or the user-managed switches.
+  RIFF WAV files over 4 GB are rejected.
 
 ## Project protection and recovery
 
@@ -120,8 +123,7 @@ overwritten. Source files, working Sets and user media are never deleted.
 
 - Exact GUI behaviour needs verification on Live 12.4.x; no prevalidated export
   profile is included. The calibrated chooser order assumes Live's documented
-  Main / All Individual Tracks / Selected Tracks, WAV / AIFF / FLAC and
-  16 / 24 / 32-bit ordering.
+  Main / All Individual Tracks / Selected Tracks and 16 / 24 / 32-bit ordering.
 - Name recognition is a suggestion, not an audio classifier. Unknown material
   needs explicit role assignment for vocal-dependent variants. An Instrument
   parent is an explicit declaration about its descendants.
@@ -152,9 +154,14 @@ dotnet publish src/AbleBounce/AbleBounce.csproj -c Release -r win-x64 --self-con
 `AbleBounce.exe --demo` runs a clearly labelled design preview without Live.
 `--demo --screenshot preview.png` captures the actual WPF window and exits.
 
-See [ARCHITECTURE.md](docs/ARCHITECTURE.md) and
-[LIVE_VALIDATION.md](docs/LIVE_VALIDATION.md) for the integration contract and
-the required Windows/Live acceptance procedure.
+Version 0.1.3 retains the 0.1.2 Windows Save-dialog fix: paths are entered through
+the identified filename control and read back before submission. Windows tests
+exercise real Save dialogs, including spaces and Cyrillic paths. These tests do
+not exercise Live’s own dialogs.
+
+See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for the integration contract,
+[LIVE_VALIDATION.md](docs/LIVE_VALIDATION.md) for the required acceptance run and
+[UI_REVIEW.md](docs/UI_REVIEW.md) for the current review limits.
 
 ## References
 
@@ -165,3 +172,4 @@ the required Windows/Live acceptance procedure.
 - [AbletonOSC](https://github.com/ideoforms/AbletonOSC), evidence for the Remote Script transport pattern; its source is not bundled in this implementation.
 
 AbleBounce is an independent tool, not an Ableton product.
+

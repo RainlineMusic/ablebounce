@@ -32,6 +32,9 @@ try
     try { new ExportProfile { Version = "12.4.6" }.Validate(new SessionInfo { Version = "12.4.5" }); }
     catch (InvalidOperationException) { calibrationRejected = true; }
     Check(calibrationRejected, "Calibration must remain specific to the exact Live patch");
+    Check(ExportProfile.Fields.Length == 6, "Calibration must contain six captures for three controls");
+    Check(ExportProfile.Fields.Select(f => f.Key).SequenceEqual(new[] { "source", "bit_depth", "export", "bit_16", "bit_32", "source_main" }),
+        "Unexpected calibration controls");
     async Task CheckNativeSaveDialog(string directory, string filename)
     {
         Directory.CreateDirectory(directory);
@@ -103,3 +106,4 @@ try
     Console.WriteLine($"PASS: {checks} desktop core regression checks");
 }
 finally { Directory.Delete(temp, true); }
+

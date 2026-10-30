@@ -13,16 +13,24 @@ automated device activator. Keep an untouched source copy and manual exports.
    Return/Main identification and device classification. Verify Python API
    DeviceType enum, `Track.insert_device`, Utility Gain and volume formatter on
    the real host. Check source and working Set paths after Save As.
-2. Calibrate on English Live 12.4.x. Verify chooser Home/Down orders, F8 point
-   capture, native Save dialog detection and filename UIA readback. Test 100%,
+2. Calibrate on English Live 12.4.x using six F8 captures: All Individual Tracks,
+   bit depth 24, Export, bit depth 16, bit depth 32 and Main. Verify source and
+   bit-depth Home/Down orders and visual readback. Confirm exact-patch mismatch
+   requires recalibration. Verify native Save dialog detection and filename UIA
+   readback, including spaces and Cyrillic paths (the 0.1.2 fix). Test 100%,
    125%, 150% DPI separately and a second monitor. Moving/resizing/theme changes
    must fail closed or require recalibration.
 3. Export all nine variants with a short fixed range. Compare each with a manual
    reference export. Instrumental variants must contain no lead/backing or vocal
    wet return. Backing variants must retain backing while removing lead.
-4. At 16/24/32-bit verify file format, common start, sample count and actual
-   sample rate. Verify 32-bit is IEEE float. Confirm no Normalize/MP3/Mono/Loop
-   and no Return/Main Effects on the multitrack job. Test reverb tails.
+4. Set WAV/stereo, PCM On and No Dither manually in Live; set Normalize, Mono,
+   Loop, MP3 and Include Return and Main Effects Off. Set sample rate, Render
+   Start and Render Length including tails. AbleBounce does not change or verify
+   these switches: confirm the UI and documentation make that responsibility clear.
+   At 16/24/32-bit verify file format, common start, sample count and actual sample
+   rate against manual references. Verify 32-bit is IEEE float. Check unchanged
+   manual settings after every pass and test reverb tails. WAV header validation
+   alone cannot prove that dither, normalization or the intended range is correct.
 5. For −6 dB, compare the lead root before downstream group/master processing;
    expected amplitude ratio is `10^(-6/20) = 0.501187…`. The processed final mix
    need not differ by that exact ratio because other sources and nonlinear
@@ -51,3 +59,4 @@ automated device activator. Keep an untouched source copy and manual exports.
 
 Record the Windows build, Live full version, display configuration, plugin list,
 export profile and comparison results before declaring the integration verified.
+

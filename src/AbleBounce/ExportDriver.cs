@@ -47,13 +47,6 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
         for (var i = 0; i < index; i++) { Guard(); Native.Key(Native.Down); }
         Guard(); Native.Key(Native.Enter); await Away(ct);
     }
-    private async Task EnsureSwitch(string key, CancellationToken ct)
-    {
-        await Away(ct);
-        if (Matches(key)) return;
-        await Click(key, ct); await Away(ct);
-        if (!Matches(key)) throw new InvalidOperationException($"Cannot verify the '{key}' export setting. Check Live's dialog and recalibrate.");
-    }
     private async Task WaitExportDialog(CancellationToken ct)
     {
         var end = DateTime.UtcNow.AddSeconds(12);
@@ -107,19 +100,11 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
         await Choose("source", job == 8 ? 1 : 0, ct);
         if (!Matches(job == 8 ? "source" : "source_main"))
             throw new InvalidOperationException("Cannot verify the selected render source. Recalibrate Main and All Individual Tracks.");
-        await EnsureSwitch("pcm", ct);
-        await Choose("file_type", 0, ct); // Live's documented WAV, AIFF, FLAC order
-        if (!Matches("file_type")) throw new InvalidOperationException("Cannot verify WAV as the export file type.");
         await Choose("bit_depth", bits == 16 ? 0 : bits == 24 ? 1 : 2, ct);
         if (!Matches(bits == 16 ? "bit_16" : bits == 32 ? "bit_32" : "bit_depth"))
             throw new InvalidOperationException("Cannot verify the selected bit depth. Recalibrate the export dialog.");
-        if (bits != 32)
-        {
-            await Choose("dither", 0, ct);
-            if (!Matches("dither")) throw new InvalidOperationException("Cannot verify No Dither in the export dialog.");
-        }
-        foreach (string key in new[] { "normalize", "mono", "loop", "mp3" }) await EnsureSwitch(key, ct);
-        if (job == 8) await EnsureSwitch("include", ct);
+        // Fixed export switches are deliberately user-managed. Only source,
+        // bit depth and Export are automated and calibrated.
         await Away(ct);
         if (!Matches("export")) throw new InvalidOperationException("Export dialog changed before rendering. Recalibrate.");
         var output = Path.Combine(directory, "AbleBounce.wav");
@@ -238,3 +223,4 @@ public static class WaveFile
         return new(bits, channels, rate, data / block);
     }
 }
+

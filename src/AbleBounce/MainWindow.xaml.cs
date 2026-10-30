@@ -91,7 +91,7 @@ public partial class MainWindow : Window
         try
         {
             BridgeClient.Install(dialog.FolderName);
-            MessageBox.Show(this, "Bridge installed. Restart Live, then open Settings → Link, Tempo & MIDI.\n\nChoose AbleBounce in a free Control Surface slot. Set its Input and Output to None.\n\nReturn here and click Connect to Live.", "Live bridge installed", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this, "Bridge installed. Restart Live, then open Settings → Link, Tempo & MIDI.\n\nChoose AbleBounce in a free Control Surface slot. Set its Input and Output to None.\n\nReturn here and click Connect.", "Live bridge installed", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex) { ShowError(ex); }
     }
@@ -127,12 +127,6 @@ public partial class MainWindow : Window
         }
         SaveRoles(); _vm.AddLog("Unassigned leaf tracks marked. Review vocal groups before exporting.");
     }
-    private void Setup_Click(object sender, RoutedEventArgs e)
-    {
-        var button = (Button)sender;
-        button.ContextMenu.PlacementTarget = button;
-        button.ContextMenu.IsOpen = true;
-    }
     private void SelectAll_Click(object sender, RoutedEventArgs e) { foreach (var d in _vm.Deliveries) d.Selected = true; }
     private void SelectNone_Click(object sender, RoutedEventArgs e) { foreach (var d in _vm.Deliveries) d.Selected = false; }
     private async void Export_Click(object sender, RoutedEventArgs e)
@@ -144,7 +138,7 @@ public partial class MainWindow : Window
         var profile = Storage.Read<ExportProfile>("export-profile.json");
         if (profile == null) { MessageBox.Show("Calibrate Live's export dialog first."); return; }
         if (MessageBox.Show(this,
-            "AbleBounce will create a working .als beside your current Set. Your original file stays untouched.\n\nClose Live's Export dialog before continuing. Keep the desktop unlocked and let AbleBounce control Live. All passes reuse the export range and sample rate configured in Live.\n\nSave your original Set in Live first if you want its latest edits stored there too. The working copy will include the current edits.",
+            "AbleBounce will create a working .als beside your current Set. Your original file stays untouched.\n\nClose Live's Export dialog before continuing. Keep the desktop unlocked and let AbleBounce control Live. All passes reuse the export range and sample rate configured in Live.\n\nManually set WAV/stereo, PCM On, No Dither. Turn Normalize, Mono, Loop, MP3 and Include Return and Main Effects Off. AbleBounce does not verify these switches.\n\nSave your original Set in Live first if you want its latest edits stored there too. The working copy will include the current edits.",
             "Start batch export", MessageBoxButton.OKCancel, MessageBoxImage.Information) != MessageBoxResult.OK) return;
         _vm.Busy = true; _vm.ExportRunning = true; _cancellation = new();
         SaveRoles();
@@ -165,7 +159,7 @@ public partial class MainWindow : Window
         catch (Exception ex) { ShowError(ex); }
         finally
         {
-            _cancellation.Dispose(); _cancellation = null; _vm.ExportRunning = false; _vm.Busy = false;
+            _cancellation.Dispose(); _cancellation = null; _vm.ExportRunning = false;
             foreach (var row in _vm.Deliveries)
                 if (row.State is "Rendering" or "Preparing") row.State = "Review";
                 else if (row.State == "Queued") row.State = "Not run";
@@ -178,6 +172,7 @@ public partial class MainWindow : Window
                 SaveRoles();
             }
             catch { _vm.Connected = false; }
+            finally { _vm.Busy = false; }
         }
         if (finished != null)
         {
@@ -229,3 +224,4 @@ public partial class MainWindow : Window
         }
     }
 }
+

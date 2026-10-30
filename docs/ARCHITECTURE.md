@@ -8,7 +8,8 @@
   connection. Token is in the current user's LocalAppData/AbleBounce/bridge-token.
   No eval, arbitrary API traversal or external bind address.
 - Calibrated Windows GUI driver: Win32 SendInput with foreground process checks,
-  common file dialog detection/filename readback through UIA, visual toggle checks.
+  common file dialog detection/filename readback through UIA, source/bit-depth
+  visual checks. Fixed export switches remain user-managed.
 - Queue: preflight → Save As working copy → begin → prepare → native export → WAV
   verification → delivery mapping → restore → next job → final restore.
 
@@ -54,19 +55,28 @@ automatically saved. Local `last-session.json` records source/working/output pat
 
 ## Export profile and validation scope
 
-Fourteen relative coordinates and visual patches are captured from the actual Live
-English export dialog. Matching Live version, outer window size and DPI are
-required. The driver checks the expected Export button and desired switch patches,
-enters chooser values with Home/Down/Enter and verifies selected source, format,
-bit depth and dither against captured value patches as well as file encoding.
-The filename is entered only into a detected common Windows file dialog and read
-back before Enter. No blind fixed export sleeps are used for completion.
+Six relative coordinates and visual patches are captured from the actual Live
+English export dialog: source All Individual Tracks, bit depth 24, Export,
+bit depth 16, bit depth 32 and source Main. They cover only three controls.
+Matching exact Live patch, outer window size and DPI are required. Keep theme and
+dialog position unchanged. The driver checks the Export patch, enters source and
+bit-depth chooser values with Home/Down/Enter, then checks their captured patches.
+It does not change or verify WAV/stereo, PCM, dither, Normalize, Mono, Loop, MP3 or
+Include Return and Main Effects switches. Users also set rate and range in Live.
+
+The 0.1.2 Save-dialog fix remains: identify the common Windows file dialog and its
+filename control, enter the path, read it back, and submit without relying on
+current focus. Existing destinations are rejected. Real Windows Save-dialog tests
+cover working-copy paths, spaces and Cyrillic names; Live’s own Save/export dialog
+behavior still needs end-to-end validation. No blind fixed export sleep establishes
+completion.
 
 File validation checks RIFF chunks, complete sizes, positive data length, PCM vs
 float, stereo, chosen bit depth, sample rate and sample counts. These checks verify
 file structure, not whether the correct musical sources are audible. Native GUI
 behaviour, mute/send behaviour, PDC and plugin rendering require the Live acceptance
-tests. File-level success is never described as proof of sonic equivalence.
+tests in a licensed Live 12.4.x installation, which have not yet been completed.
+File-level success is never described as proof of sonic equivalence.
 
 ## Known choices
 
@@ -83,3 +93,4 @@ unique naming markers ensure file mapping works with duplicate names. Mapping is
 validated in full before moving multitrack files. The native Main reference is
 discarded only after all expected audio tracks are accounted for. Processing of
 shared nonlinear buses is not decomposed into independent reconstructable tracks.
+

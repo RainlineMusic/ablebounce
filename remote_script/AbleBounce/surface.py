@@ -55,14 +55,20 @@ class AbleBounce(ControlSurface):
         for client, state in list(self._clients.items()):
             try:
                 incoming, outgoing, created = state
+                if time.monotonic() - created > 30:
+                    self._close(client)
+                    continue
                 if outgoing:
-                    sent = client.send(outgoing)
+                    try:
+                        sent = client.send(outgoing)
+                    except BlockingIOError:
+                        continue
+                    if sent == 0:
+                        self._close(client)
+                        continue
                     del outgoing[:sent]
                     if not outgoing:
                         self._close(client)
-                    continue
-                if time.monotonic() - created > 30:
-                    self._close(client)
                     continue
                 try:
                     data = client.recv(8192)
@@ -109,3 +115,4 @@ class AbleBounce(ControlSurface):
         if self._server:
             self._server.close()
         super(AbleBounce, self).disconnect()
+

@@ -24,14 +24,6 @@ public sealed class ExportProfile
     [
         ("source", "Rendered Track: All Individual Tracks"),
         ("bit_depth", "Bit Depth chooser (currently 24)"),
-        ("file_type", "File Type chooser (WAV)"),
-        ("dither", "Dither Options chooser (No Dither)"),
-        ("normalize", "Normalize switch (Off)"),
-        ("mono", "Convert to Mono switch (Off)"),
-        ("loop", "Render as Loop switch (Off)"),
-        ("pcm", "Encode PCM switch (On)"),
-        ("mp3", "Encode MP3 switch (Off)"),
-        ("include", "Include Return and Main Effects switch (Off)"),
         ("export", "Export button"),
         ("bit_16", "Select Bit Depth 16, then point at its value"),
         ("bit_32", "Select Bit Depth 32, then point at its value"),
@@ -54,8 +46,8 @@ public sealed class CalibrationWindow : Window
 {
     private readonly ExportProfile _profile;
     private readonly System.Diagnostics.Process _live;
-    private readonly TextBlock _step = new() { FontSize = 20, FontWeight = FontWeights.SemiBold, Margin = new(0, 16, 0, 12) };
-    private readonly TextBlock _detail = new() { Foreground = Brushes.DarkSlateGray, Margin = new(0, 0, 0, 16) };
+    private readonly TextBlock _step = new() { TextWrapping = TextWrapping.Wrap, Margin = new(0, 16, 0, 12) };
+    private readonly TextBlock _detail = new() { TextWrapping = TextWrapping.Wrap, Margin = new(0, 0, 0, 16) };
     private readonly Button _back = new() { Content = "Undo last point", HorizontalAlignment = HorizontalAlignment.Left };
     private HwndSource? _source;
     private int _index;
@@ -63,20 +55,20 @@ public sealed class CalibrationWindow : Window
     public ExportProfile? Result { get; private set; }
     public CalibrationWindow(string version)
     {
-        Style = (Style)Application.Current.FindResource(typeof(Window));
         Title = "AbleBounce · Export calibration"; Width = 440; Height = 440;
+        Background = SystemColors.ControlBrush;
         ResizeMode = ResizeMode.NoResize; Topmost = true;
         _live = Native.LiveProcess();
         Native.GetWindowRect(_live.MainWindowHandle, out var rect);
         _profile = new() { Version = version, Width = rect.Width, Height = rect.Height,
             Dpi = Native.GetDpiForWindow(_live.MainWindowHandle), Captured = DateTime.Now };
         var panel = new StackPanel { Margin = new(24) };
-        panel.Children.Add(new TextBlock { Text = "Teach AbleBounce your export dialog", FontSize = 18, FontWeight = FontWeights.SemiBold });
-        panel.Children.Add(new TextBlock { Text = "Move this window away from Live's Export dialog. Point at each requested control and press F8. For the last three steps, select the requested value first and close the chooser before pressing F8.", Margin = new(0, 12, 0, 0) });
+        panel.Children.Add(new TextBlock { Text = "Teach AbleBounce your export dialog", TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(new TextBlock { Text = "Move this window away from Live's Export dialog. Point at each requested control and press F8. For the last three steps, select the requested value first and close the chooser before pressing F8.", Margin = new(0, 12, 0, 0), TextWrapping = TextWrapping.Wrap });
         panel.Children.Add(_step); panel.Children.Add(_detail);
         _back.Click += (_, _) => { if (!_capturing && _index > 0) { _index--; _profile.Anchors.Remove(ExportProfile.Fields[_index].Key); UpdateStep(); } };
         panel.Children.Add(_back);
-        panel.Children.Add(new TextBlock { Text = "Keep Live's window size, theme and display scale unchanged after calibration. Press Esc to cancel.", FontSize = 12, Margin = new(0, 18, 0, 0) });
+        panel.Children.Add(new TextBlock { Text = "Keep Live's window size, theme and display scale unchanged after calibration. Press Esc to cancel.", TextWrapping = TextWrapping.Wrap, Margin = new(0, 18, 0, 0) });
         Content = panel;
         SourceInitialized += (_, _) =>
         {
@@ -92,7 +84,7 @@ public sealed class CalibrationWindow : Window
     private void UpdateStep()
     {
         _step.Text = $"{_index + 1} / {ExportProfile.Fields.Length}   {ExportProfile.Fields[_index].Label}";
-        _detail.Text = _index >= 11
+        _detail.Text = _index >= 3
             ? "Change this chooser to the requested value in Live, close its menu, hover over the value and press F8."
             : "Hover over this control in Live and press F8. Capture the value/switch itself, not its label.";
         _back.IsEnabled = _index > 0;
@@ -129,3 +121,4 @@ public sealed class CalibrationWindow : Window
         finally { _capturing = false; }
     }
 }
+

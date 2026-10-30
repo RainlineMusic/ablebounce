@@ -4,7 +4,6 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Windows;
-using System.Windows.Media;
 
 namespace AbleBounce;
 
@@ -59,19 +58,15 @@ public sealed class TrackRow : Observable
     public static string[] RoleOptions { get; } = ["Unassigned", "Inherit", "Lead", "Backing", "Instrument"];
     public TrackInfo Info { get; }
     private string _role;
-    public string Role { get => _role; set { if (Set(ref _role, value)) Changed(nameof(RoleBrush)); } }
+    public string Role { get => _role; set => Set(ref _role, value); }
     public string Name => Info.Name;
     public string Detail => Info.Group ? "GROUP" : Info.Frozen ? "Frozen" : Info.Mute ? "Muted" : Info.Volume;
     public string Number { get; }
     public Thickness Indent { get; }
-    public Brush TrackBrush { get; }
-    public Brush RoleBrush => new SolidColorBrush((Color)ColorConverter.ConvertFromString(Role switch
-    { "Lead" => "#A43F2E", "Backing" => "#39725F", "Instrument" => "#58635C", _ => "#8B642B" }));
     public TrackRow(TrackInfo info, int number, int depth, string? role = null)
     {
         Info = info; _role = role ?? info.SuggestedRole;
         Number = number.ToString("D2"); Indent = new Thickness(depth * 13, 0, 0, 0);
-        TrackBrush = new SolidColorBrush(Color.FromRgb((byte)(info.Color >> 16), (byte)(info.Color >> 8), (byte)info.Color));
     }
 }
 
@@ -170,3 +165,4 @@ public static class Storage
         return string.IsNullOrWhiteSpace(result) ? "Untitled" : result;
     }
 }
+
