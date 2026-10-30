@@ -45,7 +45,7 @@ public partial class MainWindow : Window
         Storage.Write(RoleFile(_session.Path), _vm.Tracks.ToDictionary(t => t.Info.Key, t => new SavedRole(t.Name, t.Role, t.Dry)));
     }
     private sealed record SavedRole(string Name, string Role, bool Dry = false);
-    private Dictionary<string, string> Roles() => _vm.Tracks.ToDictionary(t => t.Info.Key, t => t.Role);
+    private Dictionary<string, string> Roles() => _vm.Tracks.ToDictionary(t => t.Info.Key, t => t.Role == "Follow Group" ? "Inherit" : t.Role);
     private async Task Connect()
     {
         var session = await _bridge.Scan();
@@ -152,7 +152,7 @@ public partial class MainWindow : Window
     }
     private void MarkRemaining_Click(object sender, RoutedEventArgs e)
     {
-        foreach (var t in _vm.Tracks.Where(t => (t.Role == "Unassigned" || t.Role == "Inherit") && !t.Info.Group))
+        foreach (var t in _vm.Tracks.Where(t => t.Role == "Unassigned" && t.Info.Parent == null && !t.Info.Group))
         {
             var parent = t.Info.Parent;
             string ancestorRole = "Unassigned";

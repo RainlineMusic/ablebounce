@@ -55,7 +55,7 @@ public sealed class SessionInfo
 
 public sealed class TrackRow : Observable
 {
-    public static string[] RoleOptions { get; } = ["Unassigned", "Inherit", "Lead", "Backing", "Instrument"];
+    public static string[] RoleOptions { get; } = ["Unassigned", "Follow Group", "Lead", "Backing", "Instrument"];
     public TrackInfo Info { get; }
     private bool _dry;
     public bool Dry { get => _dry; set => Set(ref _dry, value); }
@@ -68,7 +68,8 @@ public sealed class TrackRow : Observable
     public Thickness Indent { get; }
     public TrackRow(TrackInfo info, int number, int depth, string? role = null)
     {
-        Info = info; _role = role ?? (info.Parent != null ? "Inherit" : info.SuggestedRole);
+        Info = info; _role = role ?? (info.Parent != null ? "Follow Group" : info.SuggestedRole);
+        if (_role == "Inherit") _role = "Follow Group";
         Number = number.ToString("D2"); Indent = new Thickness(depth * 13, 0, 0, 0);
     }
 }
