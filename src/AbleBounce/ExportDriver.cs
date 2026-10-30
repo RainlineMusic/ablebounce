@@ -134,10 +134,19 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
         Guard(); Native.Chord(Native.Ctrl, Native.Shift, (ushort)'R');
         await Away(ct); await WaitExportDialog(ct);
         await Choose("source", job == 8 ? 1 : 0, ct);
+        if (!Matches(job == 8 ? "source" : "source_main"))
+            throw new InvalidOperationException("Cannot verify the selected render source. Recalibrate Main and All Individual Tracks.");
         await EnsureSwitch("pcm", ct);
         await Choose("file_type", 0, ct); // Live's documented WAV, AIFF, FLAC order
+        if (!Matches("file_type")) throw new InvalidOperationException("Cannot verify WAV as the export file type.");
         await Choose("bit_depth", bits == 16 ? 0 : bits == 24 ? 1 : 2, ct);
-        if (bits != 32) await Choose("dither", 0, ct);
+        if (!Matches(bits == 16 ? "bit_16" : bits == 32 ? "bit_32" : "bit_depth"))
+            throw new InvalidOperationException("Cannot verify the selected bit depth. Recalibrate the export dialog.");
+        if (bits != 32)
+        {
+            await Choose("dither", 0, ct);
+            if (!Matches("dither")) throw new InvalidOperationException("Cannot verify No Dither in the export dialog.");
+        }
         foreach (string key in new[] { "normalize", "mono", "loop", "mp3" }) await EnsureSwitch(key, ct);
         if (job == 8) await EnsureSwitch("include", ct);
         await Away(ct);

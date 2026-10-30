@@ -39,6 +39,9 @@ jobs:
           $app = Start-Process artifacts/portable/AbleBounce.exe -ArgumentList '--demo --screenshot artifacts/preview/ablebounce.png' -PassThru
           if (-not $app.WaitForExit(45000)) { Stop-Process -Id $app.Id; throw 'Preview capture timed out' }
           if (-not (Test-Path artifacts/preview/ablebounce.png)) { throw 'Preview was not produced' }
+          $small = Start-Process artifacts/portable/AbleBounce.exe -ArgumentList '--demo --preview-size 1060x740 --screenshot artifacts/preview/ablebounce-minimum.png' -PassThru
+          if (-not $small.WaitForExit(45000)) { Stop-Process -Id $small.Id; throw 'Minimum preview timed out' }
+          if (-not (Test-Path artifacts/preview/ablebounce-minimum.png)) { throw 'Minimum preview was not produced' }
       - name: Build installer
         shell: pwsh
         run: |

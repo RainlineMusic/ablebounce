@@ -152,11 +152,11 @@ class Engine:
             output.append({
                 "key": k, "name": t.name, "parent": self.key(parent) if parent else None,
                 "group": group, "return": k.startswith("r:"), "master": k == "master",
-                "audio": bool(getattr(t, "has_audio_output", True)),
+                "audio": True if k == "master" else bool(getattr(t, "has_audio_output", True)),
                 "frozen": bool(getattr(t, "is_frozen", False)) if k.startswith("t:") else False,
                 "mute": bool(t.mute) if k != "master" else False,
                 "solo": bool(t.solo) if k != "master" else False, "color": int(t.color),
-                "suggested_role": "Inherit" if parent else ("Unassigned" if group else role_guess(t.name)),
+                "suggested_role": "Inherit" if parent and role_guess(t.name) == "Unassigned" else role_guess(t.name),
                 "volume": str(t.mixer_device.volume),
                 "volume_automation": int(t.mixer_device.volume.automation_state),
                 "output": self.routing_name(t.output_routing_type) if k != "master" else "",
@@ -246,7 +246,20 @@ class Engine:
                 parent = self.parent(t)
                 expected = ["Main", "Master"] + ([parent.name, "Group"] if parent else [])
                 if route not in expected:
-                    raise BounceError("Vocal custom routing requires review: %s → %s. Mark its dedicated bus as vocal or route it to its parent/Main." % (t.name, route))
+                    raise BounceError("Vocal custom routing requires review: %s → %s. Use a dedicated parent group or route this track to Main." % (t.name, route))
+        if vocal_jobs:
+            vocal_bus_names = {t.name for t in self.tracks()
+                               if self.effective_role(t) in ("Lead", "Backing")}
+            for t in self.tracks() + list(self.song.return_tracks):
+                role = self.effective_role(t) if t in self.tracks() else "Instrument"
+                route = self.routing_name(t.output_routing_type)
+                if route in vocal_bus_names and role not in ("Lead", "Backing"):
+                    raise BounceError("Non-vocal audio feeds a vocal bus: %s → %s. Separate that routing before exporting vocal variants." % (t.name, route))
+                # Pre-/post-FX audio taps can bypass Track Activator. Reject a
+                # non-vocal receiver of a vocal source instead of leaking voice.
+                incoming = self.routing_name(getattr(t, "input_routing_type", None)) if t in self.tracks() and not t.is_foldable else ""
+                if incoming in vocal_bus_names and role not in ("Lead", "Backing"):
+                    raise BounceError("A non-vocal track receives a vocal audio tap: %s ← %s. Review its role and routing." % (t.name, incoming))
         # Automated send/device on parameters are permitted only if writable.
         # write() captures and restores their exact automation override state.
         for t in self.all_tracks():
@@ -317,7 +330,8 @@ class Engine:
         if getattr(track, "is_frozen", False):
             raise BounceError("Unfreeze before applying the lead trim: " + track.name)
         # A fresh final Utility retains fader automation and device drive. It
-        # also attenuates pre-fader sends, explicitly documented in the UI.
+        # also attenuates this root's own pre-fader sends. Descendant sends that
+        # bypass a selected group do not traverse the trim, like a group fader.
         before = list(track.devices)
         track.insert_device("Utility", len(before))
         added = [d for d in track.devices if d not in before]

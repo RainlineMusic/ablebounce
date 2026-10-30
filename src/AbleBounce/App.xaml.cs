@@ -23,9 +23,18 @@ public partial class App : Application
             window.ContentRendered += async (_, _) =>
             {
                 await Task.Delay(500);
-                window.UpdateLayout();
-                var bitmap = new RenderTargetBitmap((int)window.ActualWidth, (int)window.ActualHeight, 96, 96, PixelFormats.Pbgra32);
-                bitmap.Render(window);
+                // Hosted runners can have a smaller work area than the target
+                // viewport. Render the actual root visual at an explicit size,
+                // excluding nonclient chrome and any offscreen black edge.
+                var root = (FrameworkElement)window.Content;
+                int sizeIndex = Array.IndexOf(e.Args, "--preview-size");
+                var size = sizeIndex >= 0 && sizeIndex + 1 < e.Args.Length ? e.Args[sizeIndex + 1].Split('x') : ["1280", "860"];
+                int width = int.Parse(size[0]), height = int.Parse(size[1]);
+                root.Width = width; root.Height = height;
+                root.Measure(new Size(width, height));
+                root.Arrange(new Rect(0, 0, width, height)); root.UpdateLayout();
+                var bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+                bitmap.Render(root);
                 var encoder = new PngBitmapEncoder();
                 encoder.Frames.Add(BitmapFrame.Create(bitmap));
                 var path = Path.GetFullPath(e.Args[capture + 1]);

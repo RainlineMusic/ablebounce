@@ -22,7 +22,7 @@ public sealed class ExportProfile
     public DateTime Captured { get; set; }
     public static (string Key, string Label)[] Fields =>
     [
-        ("source", "Rendered Track chooser"),
+        ("source", "Rendered Track: All Individual Tracks"),
         ("bit_depth", "Bit Depth chooser (currently 24)"),
         ("file_type", "File Type chooser (WAV)"),
         ("dither", "Dither Options chooser (No Dither)"),
@@ -33,6 +33,9 @@ public sealed class ExportProfile
         ("mp3", "Encode MP3 switch (Off)"),
         ("include", "Include Return and Main Effects switch (Off)"),
         ("export", "Export button"),
+        ("bit_16", "Select Bit Depth 16, then point at its value"),
+        ("bit_32", "Select Bit Depth 32, then point at its value"),
+        ("source_main", "Select Rendered Track Main, then point at its value"),
     ];
     public void Validate(SessionInfo session)
     {
@@ -68,7 +71,7 @@ public sealed class CalibrationWindow : Window
             Dpi = Native.GetDpiForWindow(_live.MainWindowHandle), Captured = DateTime.Now };
         var panel = new StackPanel { Margin = new(24) };
         panel.Children.Add(new TextBlock { Text = "Teach AbleBounce your export dialog", FontSize = 18, FontWeight = FontWeights.SemiBold });
-        panel.Children.Add(new TextBlock { Text = "Move this window away from Live's Export dialog. Point at the centre of each requested control and press F8. Do not open chooser menus while capturing.", Margin = new(0, 12, 0, 0) });
+        panel.Children.Add(new TextBlock { Text = "Move this window away from Live's Export dialog. Point at each requested control and press F8. For the last three steps, select the requested value first and close the chooser before pressing F8.", Margin = new(0, 12, 0, 0) });
         panel.Children.Add(_step); panel.Children.Add(_detail);
         _back.Click += (_, _) => { if (!_capturing && _index > 0) { _index--; _profile.Anchors.Remove(ExportProfile.Fields[_index].Key); UpdateStep(); } };
         panel.Children.Add(_back);
@@ -88,7 +91,9 @@ public sealed class CalibrationWindow : Window
     private void UpdateStep()
     {
         _step.Text = $"{_index + 1} / {ExportProfile.Fields.Length}   {ExportProfile.Fields[_index].Label}";
-        _detail.Text = "Hover over this control in Live and press F8. Capture the value/switch itself, not its label.";
+        _detail.Text = _index >= 11
+            ? "Change this chooser to the requested value in Live, close its menu, hover over the value and press F8."
+            : "Hover over this control in Live and press F8. Capture the value/switch itself, not its label.";
         _back.IsEnabled = _index > 0;
     }
     private nint Hook(nint hwnd, int msg, nint wParam, nint lParam, ref bool handled)

@@ -66,7 +66,7 @@ public sealed class TrackRow : Observable
     public Thickness Indent { get; }
     public Brush TrackBrush { get; }
     public Brush RoleBrush => new SolidColorBrush((Color)ColorConverter.ConvertFromString(Role switch
-    { "Lead" => "#D25B42", "Backing" => "#39725F", "Instrument" => "#58635C", _ => "#8B642B" }));
+    { "Lead" => "#A43F2E", "Backing" => "#39725F", "Instrument" => "#58635C", _ => "#8B642B" }));
     public TrackRow(TrackInfo info, int number, int depth, string? role = null)
     {
         Info = info; _role = role ?? info.SuggestedRole;

@@ -54,10 +54,11 @@ automatically saved. Local `last-session.json` records source/working/output pat
 
 ## Export profile and validation scope
 
-Eleven relative coordinates and visual patches are captured from the actual Live
+Fourteen relative coordinates and visual patches are captured from the actual Live
 English export dialog. Matching Live version, outer window size and DPI are
 required. The driver checks the expected Export button and desired switch patches,
-enters chooser values with Home/Down/Enter and verifies resulting file encoding.
+enters chooser values with Home/Down/Enter and verifies selected source, format,
+bit depth and dither against captured value patches as well as file encoding.
 The filename is entered only into a detected common Windows file dialog and read
 back before Enter. No blind fixed export sleeps are used for completion.
 
@@ -70,7 +71,9 @@ tests. File-level success is never described as proof of sonic equivalence.
 ## Known choices
 
 One final Utility per selected lead root is used even without fader automation,
-providing consistent trim semantics. Pre-fader sends are reduced too. Dry output
+providing consistent trim semantics. The root's own sends are reduced too;
+descendant sends bypassing a selected group keep their level (group-fader-like
+placement without changing drive into the group processors). Dry output
 is a post-edit/post-fader sum through the unchanged Main fader, with all Main
 devices bypassed; it is not a raw-source sample export. Instrument devices remain
 enabled, while audio-effect rack parents are bypassed as complete devices.

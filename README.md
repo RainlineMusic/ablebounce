@@ -68,7 +68,9 @@ stops the batch instead of continuing with guessed settings.
 - **No master** bypasses devices on Main, preserving the Main fader. It does not
   set Main to 0 dB or remove group processing.
 - **Lead −6 dB** inserts a temporary, final **Utility** at each selected lead root,
-  preserving the existing fader automation. This also reduces pre-fader sends.
+  preserving the existing fader automation. This reduces the root's own sends;
+  descendant sends that bypass a selected group retain their original level,
+  just as they would when lowering that group's fader. Group drive is preserved.
   A selected group and its children are never trimmed twice. Gain is read back
   in decibels, not guessed from a normalized parameter value.
 - **Multitrack** uses All Individual Tracks with Include Return and Main Effects
@@ -119,7 +121,8 @@ overwritten. Source files, working Sets and user media are never deleted.
 - Name recognition is a suggestion, not an audio classifier. Unknown material
   needs explicit role assignment for vocal-dependent variants. An Instrument
   parent is an explicit declaration about its descendants.
-- Custom vocal routing outside the assigned parent/Main is rejected. Dedicated
+- Custom vocal routing outside the assigned parent/Main is rejected, as are
+  non-vocal tracks feeding a vocal bus or receiving a vocal audio tap. Dedicated
   parallel vocal buses and mixed shared buses require project-side routing review.
   Returns fed by correctly assigned vocals are handled by suppressing their sends.
 - Frozen dry vocals must be unfrozen first. A frozen lead selected for trim must

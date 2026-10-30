@@ -61,7 +61,7 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
                     working_set = working, bit_depth = bits, roles,
                     range = "Reused Live Export dialog start/length; sample rate set in Live", deliveries = delivered,
                     multitrack_note = "Tracks are pre-parent-bus, post-fader. Groups/Returns are alternatives; do not sum every group with all its children.",
-                    lead_trim_note = "A final Utility trims the selected lead roots by -6 dB, including their pre-fader sends."
+                    lead_trim_note = "A final Utility trims each selected lead root by -6 dB, including its own sends; descendant sends bypassing a selected group retain their original level."
                 }, Storage.Json));
             }
         }

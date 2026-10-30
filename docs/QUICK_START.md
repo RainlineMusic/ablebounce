@@ -39,9 +39,12 @@ length for reverb/delay tails; Render as Loop is not a tail-extension feature.
 
 Return to AbleBounce and choose **Calibrate export…**, acknowledge the preparation
 prompt and move the floating wizard away from Live's controls. It will ask for
-eleven points. For each one, bring Live to the foreground, hover over the centre
+fourteen points. For each one, bring Live to the foreground, hover over the centre
 of the requested value/switch and press **F8**. Do not click the Export button or
-open dropdown menus. The wizard records a small visual reference for switch
+leave dropdown menus open. For the final three captures the wizard explicitly
+asks you to select Bit Depth 16, Bit Depth 32 and Rendered Track Main; select that
+value, close the chooser, then capture it. The wizard records visual references
+for chooser and switch
 verification. If you capture the wrong point, use **Undo last point**.
 
 Keep the window size, theme, display scale and export dialog position unchanged.

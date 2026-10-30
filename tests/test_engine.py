@@ -295,6 +295,23 @@ class EngineTests(unittest.TestCase):
         self.song.tracks[2].output_routing_type = Route("Unreviewed Bus")
         with self.assertRaises(ab.BounceError): self.begin([2])
 
+    def test_instrument_feeding_vocal_bus_rejected(self):
+        self.song.tracks[0].output_routing_type = Route(self.song.tracks[1].name)
+        with self.assertRaises(ab.BounceError): self.begin([2, 7])
+
+    def test_nonvocal_audio_tap_from_vocal_rejected(self):
+        self.song.tracks[0].input_routing_type = Route(self.song.tracks[2].name)
+        with self.assertRaises(ab.BounceError): self.begin([2])
+
+    def test_lead_group_name_is_suggested(self):
+        self.assertEqual(self.engine.scan()["tracks"][1]["suggested_role"], "Lead")
+
+    def test_group_trim_is_only_at_root_not_child_sends(self):
+        token = self.begin([7])
+        sends = [p.value for p in self.song.tracks[2].mixer_device.sends]
+        self.engine.prepare(7, token)
+        self.assertEqual([p.value for p in self.song.tracks[2].mixer_device.sends], sends)
+
     def test_existing_solo_rejected(self):
         self.song.tracks[0].solo = True
         with self.assertRaises(ab.BounceError): self.begin([1])

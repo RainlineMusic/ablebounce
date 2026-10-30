@@ -50,7 +50,7 @@ public partial class MainWindow : Window
     {
         var session = await _bridge.Scan();
         if (session.Protocol != 1) throw new InvalidOperationException("Bridge protocol mismatch. Install the bridge included with this version.");
-        if (!session.Version.StartsWith("12.")) throw new InvalidOperationException("This build targets Live 12.4.6. Earlier major versions are not supported.");
+        if (session.Version != "12.4.6") throw new InvalidOperationException("This integration build targets Live 12.4.6. A different Live version needs a verified compatibility profile.");
         _session = session;
         var saved = Storage.Read<Dictionary<string, SavedRole>>(RoleFile(session.Path));
         _vm.Tracks.Clear();
@@ -112,8 +112,26 @@ public partial class MainWindow : Window
     }
     private void MarkRemaining_Click(object sender, RoutedEventArgs e)
     {
-        foreach (var t in _vm.Tracks.Where(t => t.Role == "Unassigned" && !t.Info.Group)) t.Role = t.Info.Parent == null ? "Instrument" : "Inherit";
+        foreach (var t in _vm.Tracks.Where(t => t.Role == "Unassigned" && !t.Info.Group))
+        {
+            var parent = t.Info.Parent;
+            string ancestorRole = "Unassigned";
+            while (parent != null)
+            {
+                var row = _vm.Tracks.FirstOrDefault(p => p.Info.Key == parent);
+                if (row == null) break;
+                if (row.Role is "Lead" or "Backing" or "Instrument") { ancestorRole = row.Role; break; }
+                parent = row.Info.Parent;
+            }
+            t.Role = ancestorRole == "Unassigned" ? "Instrument" : "Inherit";
+        }
         SaveRoles(); _vm.AddLog("Unassigned leaf tracks marked. Review vocal groups before exporting.");
+    }
+    private void Setup_Click(object sender, RoutedEventArgs e)
+    {
+        var button = (Button)sender;
+        button.ContextMenu.PlacementTarget = button;
+        button.ContextMenu.IsOpen = true;
     }
     private void SelectAll_Click(object sender, RoutedEventArgs e) { foreach (var d in _vm.Deliveries) d.Selected = true; }
     private void SelectNone_Click(object sender, RoutedEventArgs e) { foreach (var d in _vm.Deliveries) d.Selected = false; }
@@ -148,7 +166,15 @@ public partial class MainWindow : Window
         finally
         {
             _cancellation.Dispose(); _cancellation = null; _vm.Busy = false;
-            try { await Connect(); } catch { _vm.Connected = false; }
+            var retained = _vm.Tracks.ToDictionary(t => t.Info.Key, t => new SavedRole(t.Name, t.Role));
+            try
+            {
+                await Connect();
+                foreach (var row in _vm.Tracks)
+                    if (retained.TryGetValue(row.Info.Key, out var saved) && saved.Name == row.Name) row.Role = saved.Role;
+                SaveRoles();
+            }
+            catch { _vm.Connected = false; }
         }
         if (finished != null)
         {

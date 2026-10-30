@@ -4,16 +4,23 @@
     <Grid.RowDefinitions><RowDefinition Height="78"/><RowDefinition Height="*"/><RowDefinition Height="104"/></Grid.RowDefinitions>
     <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="26,0">
       <Grid>
-        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
           <Border Background="{StaticResource GreenBrush}" Width="36" Height="36" CornerRadius="9" Margin="0,0,12,0">
             <Path Data="M 8,23 L 8,13 M 15,25 L 15,8 M 22,22 L 22,14 M 29,25 L 29,10" Stroke="#D7F36B" StrokeThickness="3" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
           </Border>
           <TextBlock Text="AbleBounce" FontSize="23" FontWeight="SemiBold" VerticalAlignment="Center"/>
-          <TextBlock Text="Session delivery, sorted." Foreground="{StaticResource MutedBrush}" Margin="18,0,0,0" VerticalAlignment="Center"/>
         </StackPanel>
         <TextBlock Grid.Column="1" Text="{Binding Connection}" Foreground="{StaticResource GreenBrush}" VerticalAlignment="Center" Margin="12,0,18,0"/>
-        <Button Grid.Column="2" Content="Connect to Live" Click="Connect_Click" IsEnabled="{Binding Idle}"/>
+        <Button Grid.Column="2" Content="Setup" IsEnabled="{Binding Idle}" Click="Setup_Click" Margin="0,0,10,0" VerticalAlignment="Center">
+          <Button.ContextMenu><ContextMenu>
+            <MenuItem Header="Install Live bridge…" Click="InstallBridge_Click"/>
+            <MenuItem Header="Calibrate export…" Click="Calibrate_Click"/>
+            <Separator/>
+            <MenuItem Header="Restore working Set" Click="Restore_Click"/>
+          </ContextMenu></Button.ContextMenu>
+        </Button>
+        <Button Grid.Column="3" Content="Connect to Live" Click="Connect_Click" IsEnabled="{Binding Idle}" VerticalAlignment="Center"/>
       </Grid>
     </Border>
 
@@ -35,10 +42,11 @@
                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                     <Grid.ColumnDefinitions><ColumnDefinition Width="25"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                     <TextBlock Text="{Binding Number}" FontSize="11" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                      <Rectangle Width="7" Height="7" Fill="{Binding TrackBrush}" Margin="0,0,7,0"/>
-                      <TextBlock Text="{Binding Name}" FontWeight="SemiBold" MaxWidth="190" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" ToolTip="{Binding Name}"/>
-                    </StackPanel>
+                    <Grid Grid.Column="1">
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="14"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                      <Rectangle Width="7" Height="7" Fill="{Binding TrackBrush}" HorizontalAlignment="Left"/>
+                      <TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" ToolTip="{Binding Name}"/>
+                    </Grid>
                     <Grid Grid.Row="1" Grid.ColumnSpan="2" Margin="0,7,0,0">
                       <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="122"/></Grid.ColumnDefinitions>
                       <TextBlock Text="{Binding Detail}" Foreground="{StaticResource MutedBrush}" FontSize="11" VerticalAlignment="Center"/>
@@ -72,13 +80,13 @@
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
           <ItemsControl ItemsSource="{Binding Deliveries}">
             <ItemsControl.ItemTemplate><DataTemplate>
-              <Border x:Name="Row" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="10,12" ToolTip="{Binding Description}">
+              <Border x:Name="Row" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="10,4" ToolTip="{Binding Description}">
                 <Grid>
                   <Grid.ColumnDefinitions><ColumnDefinition Width="29"/><ColumnDefinition Width="*"/><ColumnDefinition Width="62"/></Grid.ColumnDefinitions>
                   <CheckBox IsChecked="{Binding Selected}" IsEnabled="{Binding DataContext.Idle, RelativeSource={RelativeSource AncestorType=Window}}" VerticalAlignment="Center" AutomationProperties.Name="{Binding Title}"/>
                   <StackPanel Grid.Column="1" Margin="4,0,8,0">
                     <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
                       <TextBlock Text="{Binding Vocals}" FontSize="11" Foreground="{StaticResource MutedBrush}"/>
                       <TextBlock Text=" · Master: " FontSize="11" Foreground="{StaticResource MutedBrush}"/>
                       <TextBlock Text="{Binding Master}" FontSize="11" Foreground="{StaticResource MutedBrush}"/>
@@ -118,7 +126,7 @@
               <Button Content="Install Live bridge…" Click="InstallBridge_Click" Margin="0,0,0,8"/>
               <Button Content="Calibrate export…" Click="Calibrate_Click" Margin="0,0,0,8"/>
               <Button Content="Restore working Set" Click="Restore_Click" Margin="0,0,0,14"/>
-              <TextBlock Text="Lead −6 dB uses a final Utility and also trims pre-fader sends. Dry vocals retain Warp, edits, Clip Gain, faders and pan." FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,14"/>
+              <TextBlock Text="Lead trim is applied at each selected root. Descendant sends that bypass a selected group keep their level. Dry vocals retain Warp, edits, Clip Gain, faders and pan." FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,14"/>
               <Button Content="View activity" Click="Activity_Click" MinHeight="32" FontSize="12" Padding="8,5"/>
             </StackPanel>
           </StackPanel>
