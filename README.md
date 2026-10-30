@@ -1,4 +1,12 @@
-# glucose 0.2.6
+# glucose 0.2.7
+
+Locked WAV files are treated as an export still in progress, even if Live's
+bridge reports idle. Completion requires an unchanged file set, lengths and
+write times for two seconds, exclusive access, an idle bridge and no modal
+render dialog, followed by another stability check. Header/format failures are
+reported only after twelve seconds of unchanged files; sharing violations keep
+waiting and remain cancellable. Existing bridge and calibration are compatible.
+
 
 Export dialog verification now checks its title/process, dimensions, DPI and
 selected source value instead of requiring an identical Export-button image.

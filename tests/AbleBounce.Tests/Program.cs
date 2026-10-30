@@ -123,6 +123,14 @@ try
     Reject(() => WaveFile.Inspect(truncated, 24), "Truncated render accepted");
     var unfinished = Wav(16); using (var f = File.OpenWrite(unfinished)) { f.Position = 4; f.Write(new byte[4]); }
     Reject(() => WaveFile.Inspect(unfinished, 16), "Unfinished RIFF accepted");
+    var lockedWave = Wav(24);
+    using (var writer = new FileStream(lockedWave, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+    {
+        try { WaveFile.Inspect(lockedWave, 24, exclusive: true); throw new Exception("Busy WAV was accepted"); }
+        catch (IOException ex) { Check(WaveFile.IsFileInUse(ex), "A busy WAV must be recognised as a temporary sharing violation"); }
+    }
+    Check(WaveFile.Inspect(lockedWave, 24, exclusive: true).Bits == 24, "WAV did not validate after writer released it");
+    Check(!WaveFile.IsFileInUse(new IOException("invalid format")), "A format error was misclassified as a sharing violation");
     var safe = Storage.SafeName("A<>:\"/\\|?*Song. ");
     Check(safe.IndexOfAny(Path.GetInvalidFileNameChars()) < 0 && !safe.EndsWith('.'), "Unsafe export filename");
     Check(Storage.SafeName(new string('x', 200)).Length <= 90, "Export filename was not bounded");

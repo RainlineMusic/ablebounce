@@ -123,6 +123,11 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
         report("Rendering in Live. The export range and sample rate come from your Live dialog.");
         List<string> result = [];
         var timeout = DateTime.UtcNow.AddHours(2);
+        string? stableSet = null;
+        var stableSince = DateTime.UtcNow;
+        var nextBusyNotice = DateTime.MinValue;
+        string Fingerprint(IEnumerable<string> paths) => string.Join("\n", paths.OrderBy(p => p, StringComparer.OrdinalIgnoreCase).Select(p =>
+        { var info = new FileInfo(p); return p + ":" + info.Length + ":" + info.LastWriteTimeUtc.Ticks; }));
         while (DateTime.UtcNow < timeout)
         {
             await Task.Delay(800, ct);
@@ -132,6 +137,9 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
             if (files.Count < expectedFiles || FileDialog(Live.Id) != 0) continue;
             try
             {
+                var observed = Fingerprint(files);
+                if (observed != stableSet) { stableSet = observed; stableSince = DateTime.UtcNow; continue; }
+                if (DateTime.UtcNow - stableSince < TimeSpan.FromSeconds(2)) continue;
                 foreach (var file in files) WaveFile.Inspect(file, bits, exclusive: true);
                 // A valid header can appear before render completion. Require
                 // Live's main thread to respond, and no modal window to remain.
@@ -140,15 +148,27 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
                 if (!status.GetProperty("idle").GetBoolean()) continue;
                 await Task.Delay(450, ct);
                 var again = Directory.GetFiles(directory, "*.wav");
-                if (again.Length != files.Count) continue;
+                if (Fingerprint(again) != stableSet) { stableSet = null; continue; }
                 foreach (var file in again) WaveFile.Inspect(file, bits, exclusive: true);
                 result = again.ToList(); break;
             }
             catch (IOException validationError)
             {
-                // A half-written WAV is normal during rendering. Once Live
-                // confirms it is idle, wrong encoding/size is a real failure,
-                // not a reason to keep the user waiting for the full timeout.
+                // A responsive Live thread is not proof that every stem writer
+                // has released its file. Sharing/lock violations always mean wait.
+                if (WaveFile.IsFileInUse(validationError) || validationError is FileNotFoundException)
+                {
+                    stableSet = null;
+                    if (DateTime.UtcNow >= nextBusyNotice)
+                    {
+                        report("Waiting for Live to finish writing the WAV files…");
+                        nextBusyNotice = DateTime.UtcNow.AddSeconds(10);
+                    }
+                    continue;
+                }
+                // Header/format errors become terminal only after the complete
+                // file set has stayed unchanged and unlocked for twelve seconds.
+                if (stableSet == null || DateTime.UtcNow - stableSince < TimeSpan.FromSeconds(12)) continue;
                 try
                 {
                     var status = await bridge.Call("status", cancellation: ct, timeoutSeconds: 3);
@@ -203,6 +223,7 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
 public sealed record WaveInfo(int Bits, int Channels, int SampleRate, long Frames);
 public static class WaveFile
 {
+    public static bool IsFileInUse(IOException error) => (error.HResult & 0xffff) is 32 or 33;
     public static WaveInfo Inspect(string path, int expectedBits, bool exclusive = false)
     {
         using var file = new FileStream(path, FileMode.Open, FileAccess.Read, exclusive ? FileShare.None : FileShare.Read);
