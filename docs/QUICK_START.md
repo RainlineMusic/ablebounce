@@ -1,4 +1,4 @@
-# First export in Live 12.4.6
+# First export in Live 12.4.x
 
 Use a short test Arrangement before exporting a real delivery. This is an
 integration preview; end-to-end Live validation has not yet been performed.

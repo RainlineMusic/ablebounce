@@ -1,6 +1,6 @@
 # AbleBounce
 
-Windows desktop companion for Ableton Live 12.4.6, English UI in both applications.
+Windows desktop companion for Ableton Live 12.4.x, English UI in both applications.
 The user selects any of nine delivery variants: original mix; instrumental;
 instrumental without master effects; full mix without master effects; backing
 vocals without lead, without master; backing vocals without lead, with master;

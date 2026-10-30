@@ -60,7 +60,7 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
                 jobState(job, "Done");
                 File.WriteAllText(Path.Combine(root, "manifest.json"), JsonSerializer.Serialize(new
                 {
-                    application = "AbleBounce 0.1.0", live_version = source.Version, source_set = source.Path,
+                    application = "AbleBounce 0.1.1", live_version = source.Version, source_set = source.Path,
                     working_set = working, bit_depth = bits, roles,
                     range = "Reused Live Export dialog start/length; sample rate set in Live", deliveries = delivered,
                     multitrack_note = "Tracks are pre-parent-bus, post-fader. Groups/Returns are alternatives; do not sum every group with all its children.",

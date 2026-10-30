@@ -1,4 +1,4 @@
-# Required Live 12.4.6 acceptance run
+# Required Live 12.4.x acceptance run
 
 **Not yet performed.** Do not replace this statement with a pass merely because
 the Windows application compiles or the fake-Live regression suite passes.
@@ -13,7 +13,7 @@ automated device activator. Keep an untouched source copy and manual exports.
    Return/Main identification and device classification. Verify Python API
    DeviceType enum, `Track.insert_device`, Utility Gain and volume formatter on
    the real host. Check source and working Set paths after Save As.
-2. Calibrate on English Live 12.4.6. Verify chooser Home/Down orders, F8 point
+2. Calibrate on English Live 12.4.x. Verify chooser Home/Down orders, F8 point
    capture, native Save dialog detection and filename UIA readback. Test 100%,
    125%, 150% DPI separately and a second monitor. Moving/resizing/theme changes
    must fail closed or require recalibration.

@@ -22,6 +22,15 @@ try
             "Escaped newline did not round-trip");
     }
     Check(Storage.Json.WriteIndented, "Wire encoding must not change settings serialization");
+    foreach (var version in new[] { "12.4.0", "12.4.5", "12.4.6", "12.4.99" })
+        Check(LiveCompatibility.IsSupported(version), $"Supported patch rejected: {version}");
+    foreach (var version in new[] { "", "12.4", "12.4.5.1", "12.4.5b1", "12.5.0", "12.3.9", "11.4.5", "13.4.5" })
+        Check(!LiveCompatibility.IsSupported(version), $"Unsupported version accepted: {version}");
+    Check(!LiveCompatibility.IsSupported(null), "Null version accepted");
+    var calibrationRejected = false;
+    try { new ExportProfile { Version = "12.4.6" }.Validate(new SessionInfo { Version = "12.4.5" }); }
+    catch (InvalidOperationException) { calibrationRejected = true; }
+    Check(calibrationRejected, "Calibration must remain specific to the exact Live patch");
     string Wav(int bits, int format = 1, int channels = 2, int frames = 100)
     {
         var path = Path.Combine(temp, Guid.NewGuid() + ".wav");

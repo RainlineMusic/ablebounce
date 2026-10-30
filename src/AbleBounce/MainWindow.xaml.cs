@@ -50,7 +50,7 @@ public partial class MainWindow : Window
     {
         var session = await _bridge.Scan();
         if (session.Protocol != 1) throw new InvalidOperationException("Bridge protocol mismatch. Install the bridge included with this version.");
-        if (session.Version != "12.4.6") throw new InvalidOperationException("This integration build targets Live 12.4.6. A different Live version needs a verified compatibility profile.");
+        if (!LiveCompatibility.IsSupported(session.Version)) throw new InvalidOperationException($"Live {session.Version} is outside the supported 12.4.x branch. Use any Live 12.4 patch release.");
         _session = session;
         var saved = Storage.Read<Dictionary<string, SavedRole>>(RoleFile(session.Path));
         _vm.Tracks.Clear();

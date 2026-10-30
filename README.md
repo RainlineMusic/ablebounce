@@ -1,12 +1,12 @@
 # AbleBounce
 
-A Windows session-delivery companion for **Ableton Live 12.4.6**, with an English
+A Windows session-delivery companion for **Ableton Live 12.4.x**, with an English
 interface. Native Live renders the audio. AbleBounce prepares track/device states,
 drives Live's English Export Audio/Video dialog and organises the results.
 
 **Status: 0.1 integration preview.** Bridge state logic has automated regression
 coverage. Windows builds and design captures run in GitHub Actions. This project
-has not yet been end-to-end tested in a licensed Live 12.4.6 installation. A
+has not yet been end-to-end tested in a licensed Live 12.4.x installation. A
 successful CI build does not establish that the export dialog calibration works
 on your machine. Test a short working copy before a full delivery.
 
@@ -42,6 +42,8 @@ Remote Script. Install the included bridge using the button inside the app.
 Each variant starts from the same baseline. Already disabled devices stay
 disabled. Original mute states stay muted. Existing solos must be cleared before
 starting, because they otherwise make vocal variants ambiguous.
+
+Connection accepts numeric patch releases in the **12.4.x** branch, including **12.4.5**. Each exact patch version requires its own export-dialog calibration. This version check is not a claim that every patch has been tested in Live.
 
 ## First run
 
@@ -116,7 +118,7 @@ overwritten. Source files, working Sets and user media are never deleted.
 
 ## Current limits
 
-- Exact GUI behaviour needs verification on Live 12.4.6; no prevalidated export
+- Exact GUI behaviour needs verification on Live 12.4.x; no prevalidated export
   profile is included. The calibrated chooser order assumes Live's documented
   Main / All Individual Tracks / Selected Tracks, WAV / AIFF / FLAC and
   16 / 24 / 32-bit ordering.

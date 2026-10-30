@@ -352,6 +352,14 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(scan["tracks"][2]["parent"], "t:1")
         self.assertTrue(scan["tracks"][-1]["master"])
 
+    def test_scan_reports_actual_patch_version(self):
+        for patch in (0, 5, 6, 99):
+            with self.subTest(patch=patch):
+                app = Application()
+                app.get_bugfix_version = lambda: patch
+                engine = ab.Engine(self.song, app)
+                self.assertEqual(engine.scan()["version"], "12.4.%d" % patch)
+
     def test_name_suggestions_are_conservative(self):
         self.assertEqual(ab.role_guess("Main Vocal 2"), "Lead")
         self.assertEqual(ab.role_guess("BGV Harmony"), "Backing")
