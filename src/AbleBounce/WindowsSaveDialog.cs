@@ -50,6 +50,11 @@ public static class WindowsSaveDialog
         // edt1 is the documented legacy filename control. Require the file type
         // combo before accepting a numeric edit ID in any dialog.
         if (Child(dialog, 1136, "ComboBox") != 0) return Child(dialog, 1152, "Edit");
+        // Vista-style shell dialogs host the filename Edit (1001) inside
+        // DirectUI rather than the legacy numbered filename combo.
+        nint shell = 0;
+        EnumChildWindows(dialog, (window, _) => { if (Class(window) == "DirectUIHWND") shell = window; return true; }, 0);
+        if (shell != 0) return Child(shell, 1001, "Edit");
         return 0;
     }
     private static bool Verified(nint dialog, int process)

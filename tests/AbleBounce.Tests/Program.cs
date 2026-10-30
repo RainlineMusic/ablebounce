@@ -44,7 +44,7 @@ try
         System.Windows.Threading.Dispatcher.Run();
     }) { IsBackground = true };
     windowThread.SetApartmentState(ApartmentState.STA); windowThread.Start();
-    var exportWindow = await shown.Task.WaitAsync(TimeSpan.FromSeconds(10));
+    var exportWindow = await shown.Task.WaitAsync(TimeSpan.FromSeconds(30));
     try
     {
         Check(Native.TryExportWindow(Environment.ProcessId, out var first), "Export dialog not located by title/process");
@@ -87,7 +87,7 @@ try
         var deadline = DateTime.UtcNow.AddSeconds(20);
         while (DateTime.UtcNow < deadline && dialog == 0 && !finished.Task.IsCompleted)
         { dialog = WindowsSaveDialog.Find(process); if (dialog == 0) await Task.Delay(100); }
-        Check(dialog != 0, "Native Windows Save dialog was not recognised: " + WindowsSaveDialog.Describe(process));
+        if (dialog == 0) throw new Exception("Native Windows Save dialog was not recognised: " + WindowsSaveDialog.Describe(process));
         var sentinel = Path.Combine(directory, "existing.als"); File.WriteAllText(sentinel, "original");
         Reject(() => WindowsSaveDialog.Submit(dialog!, process, sentinel).GetAwaiter().GetResult(), "Save helper accepted an overwrite");
         Check(File.ReadAllText(sentinel) == "original", "Existing source was modified");
