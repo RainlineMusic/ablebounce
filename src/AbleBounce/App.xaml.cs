@@ -40,7 +40,8 @@ public partial class App : Application
             int sizeIndex = Array.IndexOf(args, "--preview-size");
             var size = sizeIndex >= 0 && sizeIndex + 1 < args.Length ? args[sizeIndex + 1].Split('x') : ["1280", "860"];
             int width = int.Parse(size[0]), height = int.Parse(size[1]);
-            root.Width = width; root.Height = height;
+            root.Width = Math.Max(0, width - root.Margin.Left - root.Margin.Right);
+            root.Height = Math.Max(0, height - root.Margin.Top - root.Margin.Bottom);
             await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.DataBind);
             root.Measure(new Size(width, height)); root.Arrange(new Rect(0, 0, width, height)); root.UpdateLayout();
             await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
