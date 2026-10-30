@@ -73,7 +73,9 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
             {
                 _rect = located;
                 await Away(ct);
-                if (Matches("export")) return;
+                // Button paint can change with source selection/focus. A known
+                // source value in the verified dialog is sufficient to locate it.
+                if (Matches("source_main") || Matches("source")) return;
             }
             await Task.Delay(200, ct);
         }
@@ -110,7 +112,9 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
         // Fixed export switches are deliberately user-managed. Only source,
         // bit depth and Export are automated and calibrated.
         await Away(ct);
-        if (!Matches("export")) throw new InvalidOperationException("Export dialog changed before rendering. Recalibrate.");
+        // Validate the selected source, not the Export button's focus paint.
+        // SaveDialog below confirms the known button actually opened Save.
+        if (!Matches(sourceKey)) throw new InvalidOperationException("The selected render source changed before export. Please retry.");
         var output = Path.Combine(directory, "glucose.wav");
         report("Confirming WAV export…");
         await Click("export", ct);

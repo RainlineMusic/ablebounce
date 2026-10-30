@@ -63,7 +63,7 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
                 jobState(job, i + 1 < passes.Length && passes[i + 1].Job == job ? "Rendering" : "Done");
                 File.WriteAllText(Path.Combine(root, "manifest.json"), JsonSerializer.Serialize(new
                 {
-                    application = "glucose 0.2.5", live_version = source.Version, source_set = source.Path, track_title = title,
+                    application = "glucose 0.2.6", live_version = source.Version, source_set = source.Path, track_title = title,
                     bit_depth = range!.Bits, roles,
                     range = "Reused Live Export dialog start/length; sample rate set in Live", deliveries = delivered,
                     multitrack_note = "Tracks are pre-parent-bus, post-fader. Groups/Returns are alternatives; do not sum every group with all its children.",

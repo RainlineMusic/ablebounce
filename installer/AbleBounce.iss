@@ -1,4 +1,4 @@
-#define AppVersion "0.2.5"
+#define AppVersion "0.2.6"
 [Setup]
 AppId={{5B40FCEB-6F41-45B0-8F40-C7589C647C7D}
 AppName=glucose
@@ -11,7 +11,7 @@ PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=..\artifacts\installer
-OutputBaseFilename=glucose-Setup-0.2.5-win-x64
+OutputBaseFilename=glucose-Setup-0.2.6-win-x64
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern

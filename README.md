@@ -1,4 +1,11 @@
-# glucose 0.2.5
+# glucose 0.2.6
+
+Export dialog verification now checks its title/process, dimensions, DPI and
+selected source value instead of requiring an identical Export-button image.
+Opening the verified native Save dialog confirms the button action. This avoids
+rejecting a working All Individual Tracks dialog because of button focus paint.
+Existing calibration and bridge version 5 remain compatible.
+
 
 Duplicate names are supported without renaming Live tracks. Exported stem files
 receive automatic numbers. Selected DRY tracks render one at a time and receive
