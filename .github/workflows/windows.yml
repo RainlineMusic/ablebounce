@@ -1,0 +1,63 @@
+name: Build Windows app
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  bridge-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - run: python -m compileall -q remote_script
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build and run desktop core checks
+        shell: pwsh
+        run: dotnet run --project tests/AbleBounce.Tests/AbleBounce.Tests.csproj -c Release
+      - name: Publish portable application
+        shell: pwsh
+        run: dotnet publish src/AbleBounce/AbleBounce.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:DebugSymbols=false -o artifacts/portable
+      - name: Copy instructions
+        shell: pwsh
+        run: |
+          Copy-Item README.md artifacts/portable/README.md
+          Copy-Item docs/QUICK_START.md artifacts/portable/QUICK_START.md
+      - name: Capture design preview on Windows
+        shell: pwsh
+        run: |
+          $app = Start-Process artifacts/portable/AbleBounce.exe -ArgumentList '--demo --screenshot artifacts/preview/ablebounce.png' -PassThru
+          if (-not $app.WaitForExit(45000)) { Stop-Process -Id $app.Id; throw 'Preview capture timed out' }
+          if (-not (Test-Path artifacts/preview/ablebounce.png)) { throw 'Preview was not produced' }
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $compiler = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $compiler)) { choco install innosetup --no-progress -y; if ($LASTEXITCODE -ne 0) { throw 'Inno Setup installation failed' } }
+          & $compiler installer/AbleBounce.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AbleBounce-portable-win-x64
+          path: artifacts/portable/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AbleBounce-Setup-win-x64
+          path: artifacts/installer/*.exe
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AbleBounce-design-preview
+          path: artifacts/preview/*.png
+          if-no-files-found: error
