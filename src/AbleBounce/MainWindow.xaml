@@ -1,6 +1,6 @@
 <Window x:Class="AbleBounce.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:AbleBounce"
- Title="AbleBounce" Width="1100" Height="780" MinWidth="900" MinHeight="650"
+ Title="glucose" Width="1100" Height="780" MinWidth="900" MinHeight="650"
  Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" WindowStartupLocation="CenterScreen">
  <Grid Margin="10" Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
   <Grid.RowDefinitions>
@@ -62,7 +62,7 @@
    </Grid>
   </GroupBox>
   <GroupBox Grid.Row="4" Header="Set these manually in Live" Margin="0,8,0,0">
-   <TextBlock Margin="6" TextWrapping="Wrap" Text="WAV, stereo, PCM On, No Dither. Normalize, Convert to Mono, Render as Loop, MP3 and Include Return and Main Effects: Off. Set sample rate, Render Start and Render Length (including tails). These options are not changed or verified by AbleBounce."/>
+   <TextBlock Margin="6" TextWrapping="Wrap" Text="WAV, stereo, PCM On, No Dither. Normalize, Convert to Mono, Render as Loop, MP3 and Include Return and Main Effects: Off. Set sample rate, Render Start and Render Length (including tails). These options are not changed or verified by glucose."/>
   </GroupBox>
   <DockPanel Grid.Row="5" Margin="0,10,0,0">
    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,6,0,0">

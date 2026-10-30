@@ -31,7 +31,7 @@ public partial class MainWindow : Window
     private void OnClosing(object? sender, CancelEventArgs e)
     {
         if (_vm.Busy)
-        { e.Cancel = true; _vm.AddLog("Use Cancel & restore before closing AbleBounce."); return; }
+        { e.Cancel = true; _vm.AddLog("Use Cancel & restore before closing glucose."); return; }
         if (!_demo)
         {
             SaveRoles();
@@ -138,12 +138,13 @@ public partial class MainWindow : Window
         var profile = Storage.Read<ExportProfile>("export-profile.json");
         if (profile == null) { MessageBox.Show("Calibrate Live's export dialog first."); return; }
         if (MessageBox.Show(this,
-            "AbleBounce exports from the current open Set without saving it or creating a copy. Temporary track and device changes are restored after export.\n\nClose Live's Export dialog before continuing. Keep the desktop unlocked and let AbleBounce control Live. All passes reuse the export range and sample rate configured in Live.\n\nManually set WAV/stereo, PCM On, No Dither. Turn Normalize, Mono, Loop, MP3 and Include Return and Main Effects Off. AbleBounce does not verify these switches.",
+            "glucose exports from the current open Set without saving it or creating a copy. Temporary track and device changes are restored after export.\n\nClose Live's Export dialog before continuing. Keep the desktop unlocked and let glucose control Live. All passes reuse the export range and sample rate configured in Live.\n\nManually set WAV/stereo, PCM On, No Dither. Turn Normalize, Mono, Loop, MP3 and Include Return and Main Effects Off. glucose does not verify these switches.",
             "Start batch export", MessageBoxButton.OKCancel, MessageBoxImage.Information) != MessageBoxResult.OK) return;
         _vm.Busy = true; _vm.ExportRunning = true; _cancellation = new();
         SaveRoles();
         foreach (var d in _vm.Deliveries) d.State = d.Selected ? "Queued" : "Skipped";
         string? finished = null;
+        string? exportError = null;
         try
         {
             var queue = new BounceQueue(_bridge, profile,
@@ -156,7 +157,7 @@ public partial class MainWindow : Window
             finished = await Task.Run(() => queue.Run(source, roles, jobs, bits, output, token));
         }
         catch (OperationCanceledException) { _vm.AddLog("Cancelled. Completed exports have been kept; see activity for restoration status."); }
-        catch (Exception ex) { ShowError(ex); }
+        catch (Exception ex) { exportError = ex.Message; ShowError(ex); }
         finally
         {
             _cancellation.Dispose(); _cancellation = null; _vm.ExportRunning = false;
@@ -173,6 +174,7 @@ public partial class MainWindow : Window
             }
             catch { _vm.Connected = false; }
             finally { _vm.Busy = false; }
+            if (exportError != null) _vm.AddLog("Export stopped: " + exportError);
         }
         if (finished != null)
         {
@@ -202,10 +204,10 @@ public partial class MainWindow : Window
         var text = string.Join(Environment.NewLine + Environment.NewLine, _vm.Log);
         var box = new TextBox { Text = text.Length == 0 ? "No activity yet." : text, IsReadOnly = true,
             TextWrapping = TextWrapping.Wrap, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Margin = new(20) };
-        new Window { Owner = this, Title = "AbleBounce · Activity", Width = 760, Height = 500, Content = box, WindowStartupLocation = WindowStartupLocation.CenterOwner }.Show();
+        new Window { Owner = this, Title = "glucose · Activity", Width = 760, Height = 500, Content = box, WindowStartupLocation = WindowStartupLocation.CenterOwner }.Show();
     }
     private void ShowError(Exception ex)
-    { _vm.AddLog(ex.Message); MessageBox.Show(this, ex.Message, "AbleBounce needs attention", MessageBoxButton.OK, MessageBoxImage.Warning); }
+    { _vm.AddLog(ex.Message); MessageBox.Show(this, ex.Message, "glucose needs attention", MessageBoxButton.OK, MessageBoxImage.Warning); }
     private void LoadDemo()
     {
         _vm.Project = "Night Drive · Demo session"; _vm.Connection = "Demo · No Live connection"; _vm.Connected = true;

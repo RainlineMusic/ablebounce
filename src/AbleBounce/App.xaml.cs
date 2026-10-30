@@ -12,7 +12,7 @@ public partial class App : Application
         base.OnStartup(e);
         DispatcherUnhandledException += (_, a) =>
         {
-            MessageBox.Show(a.Exception.Message, "AbleBounce", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(a.Exception.Message, "glucose", MessageBoxButton.OK, MessageBoxImage.Error);
             a.Handled = true;
         };
         var window = new MainWindow(e.Args.Contains("--demo"));
@@ -61,3 +61,4 @@ public partial class App : Application
         }
     }
 }
+

@@ -54,7 +54,7 @@ public sealed class CalibrationWindow : Window
     public ExportProfile? Result { get; private set; }
     public CalibrationWindow(string version)
     {
-        Title = "AbleBounce · Export calibration"; Width = 440; Height = 500;
+        Title = "glucose · Export calibration"; Width = 440; Height = 500;
         Background = SystemColors.ControlBrush;
         ResizeMode = ResizeMode.NoResize; Topmost = true;
         _live = Native.LiveProcess();
@@ -63,8 +63,8 @@ public sealed class CalibrationWindow : Window
         _profile = new() { Version = version, CoordinateVersion = 2, Width = rect.Width, Height = rect.Height,
             Dpi = Native.GetDpiForWindow(_live.MainWindowHandle), Captured = DateTime.Now };
         var panel = new StackPanel { Margin = new(24) };
-        panel.Children.Add(new TextBlock { Text = "Teach AbleBounce your export dialog", TextWrapping = TextWrapping.Wrap });
-        panel.Children.Add(new TextBlock { Text = "Move this window away from Live’s Export dialog. Point at the three requested controls and press F8. AbleBounce will capture the chooser values automatically; do not click or type during that final step.", Margin = new(0, 12, 0, 0), TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(new TextBlock { Text = "Teach glucose your export dialog", TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(new TextBlock { Text = "Move this window away from Live’s Export dialog. Point at the three requested controls and press F8. glucose will capture the chooser values automatically; do not click or type during that final step.", Margin = new(0, 12, 0, 0), TextWrapping = TextWrapping.Wrap });
         panel.Children.Add(_step); panel.Children.Add(_detail);
         _back.Click += (_, _) => { if (!_capturing && _index > 0) { _index--; _profile.Anchors.Remove(ExportProfile.Fields[_index].Key); UpdateStep(); } };
         panel.Children.Add(_back);

@@ -1,28 +1,28 @@
-#define AppVersion "0.1.6"
+#define AppVersion "0.1.7"
 [Setup]
 AppId={{5B40FCEB-6F41-45B0-8F40-C7589C647C7D}
-AppName=AbleBounce
+AppName=glucose
 AppVersion={#AppVersion}
 AppPublisher=Rainline Music
 AppPublisherURL=https://github.com/RainlineMusic/ablebounce
-DefaultDirName={localappdata}\Programs\AbleBounce
-DefaultGroupName=AbleBounce
+DefaultDirName={localappdata}\Programs\glucose
+DefaultGroupName=glucose
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=..\artifacts\installer
-OutputBaseFilename=AbleBounce-Setup-0.1.6-win-x64
+OutputBaseFilename=glucose-Setup-0.1.7-win-x64
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
-UninstallDisplayIcon={app}\AbleBounce.exe
+UninstallDisplayIcon={app}\glucose.exe
 [Files]
 Source: "..\artifacts\portable\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 [Icons]
-Name: "{group}\AbleBounce"; Filename: "{app}\AbleBounce.exe"
-Name: "{autodesktop}\AbleBounce"; Filename: "{app}\AbleBounce.exe"; Tasks: desktopicon
+Name: "{group}\glucose"; Filename: "{app}\glucose.exe"
+Name: "{autodesktop}\glucose"; Filename: "{app}\glucose.exe"; Tasks: desktopicon
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Shortcuts:"; Flags: unchecked
 [Run]
-Filename: "{app}\AbleBounce.exe"; Description: "Open AbleBounce"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\glucose.exe"; Description: "Open glucose"; Flags: nowait postinstall skipifsilent
 

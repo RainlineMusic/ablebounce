@@ -1,4 +1,13 @@
-# AbleBounce
+# glucose 0.1.7
+
+Formerly AbleBounce. The executable and download artifacts are now named glucose.
+The Live Control Surface remains **AbleBounce** to preserve existing installations;
+settings and calibration are kept in their existing location.
+
+Export now waits for the actual Export Audio/Video window before moving the
+cursor. An already open export window is reused. Errors remain visible after
+reconnecting. Full Live end-to-end validation is still required.
+
 
 A Windows session-delivery companion for **Ableton Live 12.4.x**, with an English
 interface. Native Live renders the audio. AbleBounce prepares track/device states,
@@ -15,8 +24,8 @@ on your machine. Test a short working copy before a full delivery.
 Open [Actions → Build Windows app](https://github.com/RainlineMusic/ablebounce/actions/workflows/windows.yml),
 choose a successful run and download one of its artifacts:
 
-- **AbleBounce-Setup-win-x64** — EXE installer, current Windows user only.
-- **AbleBounce-portable-win-x64** — self-contained application and instructions.
+- **glucose-Setup-win-x64** — EXE installer, current Windows user only.
+- **glucose-portable-win-x64** — self-contained application and instructions.
 - **AbleBounce-design-preview** — native WPF capture using labelled demo data; it is not a Live integration test.
 
 The application includes .NET. No separate Python, Max for Live, virtual MIDI

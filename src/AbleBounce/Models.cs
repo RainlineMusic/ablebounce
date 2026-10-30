@@ -105,7 +105,7 @@ public sealed class ViewModel : Observable
     private bool _busy;
     private bool _connected;
     private bool _exportRunning;
-    private string _output = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "AbleBounce Exports");
+    private string _output = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "glucose Exports");
     private string _bitDepth = "24-bit";
     private int _completed;
     public ObservableCollection<TrackRow> Tracks { get; } = [];

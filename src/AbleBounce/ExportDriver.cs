@@ -33,7 +33,8 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
     private bool Matches(string key)
     {
         Guard();
-        if (!Native.TryExportWindow(Live.Id, out _rect)) return false;
+        if (!Native.TryExportWindow(Live.Id, out var located)) return false;
+        _rect = located;
         var (x, y) = Position(key);
         var actual = Native.Patch(x, y); var expected = profile.Anchors[key].Reference;
         if (actual.Length != expected.Length) return false;
@@ -48,7 +49,14 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
         await Task.Delay(140, ct);
     }
     private async Task Away(CancellationToken ct)
-    { Native.SetCursorPos(_rect.Left + 20, _rect.Top + 12); await Task.Delay(180, ct); }
+    {
+        Guard();
+        if (!Native.TryExportWindow(Live.Id, out var located))
+            throw new InvalidOperationException("Export window is not open; no cursor movement was sent.");
+        _rect = located;
+        Native.SetCursorPos(_rect.Left + 20, _rect.Top + 12);
+        await Task.Delay(180, ct);
+    }
     private async Task Choose(string key, int index, CancellationToken ct)
     {
         await Click(key, ct); Guard(); Native.Key(Native.Home);
@@ -61,7 +69,12 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
         while (DateTime.UtcNow < end)
         {
             ct.ThrowIfCancellationRequested();
-            if (Matches("export")) return;
+            if (Native.TryExportWindow(Live.Id, out var located))
+            {
+                _rect = located;
+                await Away(ct);
+                if (Matches("export")) return;
+            }
             await Task.Delay(200, ct);
         }
         throw new InvalidOperationException("Export Audio/Video did not match the calibrated dialog. Close other dialogs and recalibrate.");
@@ -81,11 +94,16 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
     {
         Attach(); await Native.Focus(Live, ct);
         if (Directory.EnumerateFileSystemEntries(directory).Any()) throw new IOException("The staging directory must be empty.");
-        Guard(); Native.Chord(Native.Ctrl, Native.Shift, (ushort)'R');
-        await Away(ct); await WaitExportDialog(ct);
+        report("Opening Live’s Export Audio/Video window…");
+        Guard();
+        if (!Native.TryExportWindow(Live.Id, out _))
+            Native.Chord(Native.Ctrl, Native.Shift, (ushort)'R');
+        await WaitExportDialog(ct);
+        report("Export window found. Selecting render source…");
         await Choose("source", job == 8 ? 1 : 0, ct);
         if (!Matches(job == 8 ? "source" : "source_main"))
             throw new InvalidOperationException("Cannot verify the selected render source. Recalibrate Main and All Individual Tracks.");
+        report("Selecting bit depth…");
         await Choose("bit_depth", bits == 16 ? 0 : bits == 24 ? 1 : 2, ct);
         if (!Matches(bits == 16 ? "bit_16" : bits == 32 ? "bit_32" : "bit_depth"))
             throw new InvalidOperationException("Cannot verify the selected bit depth. Recalibrate the export dialog.");
@@ -93,7 +111,8 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
         // bit depth and Export are automated and calibrated.
         await Away(ct);
         if (!Matches("export")) throw new InvalidOperationException("Export dialog changed before rendering. Recalibrate.");
-        var output = Path.Combine(directory, "AbleBounce.wav");
+        var output = Path.Combine(directory, "glucose.wav");
+        report("Confirming WAV export…");
         await Click("export", ct);
         RenderMayBeActive = true; // before confirmation, so cancellation also closes Save
         await SaveDialog(output, ct);
