@@ -37,6 +37,12 @@ try
     Check(safe.IndexOfAny(Path.GetInvalidFileNameChars()) < 0 && !safe.EndsWith('.'), "Unsafe export filename");
     Check(Storage.SafeName(new string('x', 200)).Length <= 90, "Export filename was not bounded");
     Check(DeliveryRow.Create().Select(d => d.Id).SequenceEqual(Enumerable.Range(1, 9)), "Nine delivery IDs changed");
+    var library = Path.Combine(temp, "User Library"); Directory.CreateDirectory(library);
+    BridgeClient.Install(library);
+    var script = Path.Combine(library, "Remote Scripts", "AbleBounce");
+    Check(Directory.GetFiles(script, "*.py").Length == 3, "Packaged bridge file count is wrong");
+    Check(File.ReadAllText(Path.Combine(script, "surface.py")).Contains("class AbleBounce"), "Bridge surface resource is wrong");
+    Check(File.ReadAllText(Path.Combine(script, "engine.py")).Contains("class Engine"), "Bridge engine resource is wrong");
     Console.WriteLine($"PASS: {checks} desktop core regression checks");
 }
 finally { Directory.Delete(temp, true); }

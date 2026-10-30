@@ -32,7 +32,7 @@ jobs:
         shell: pwsh
         run: |
           Copy-Item README.md artifacts/portable/README.md
-          Copy-Item docs/QUICK_START.md artifacts/portable/QUICK_START.md
+          Copy-Item docs artifacts/portable/docs -Recurse
       - name: Capture design preview on Windows
         shell: pwsh
         run: |

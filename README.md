@@ -23,6 +23,8 @@ The application includes .NET. No separate Python, Max for Live, virtual MIDI
 driver or physical controller is required. Live's built-in Python hosts the
 Remote Script. Install the included bridge using the button inside the app.
 
+![AbleBounce native Windows interface with labelled demo data](docs/images/ablebounce.png)
+
 ## Delivery variants
 
 | # | Variant | Vocals | Master devices |
