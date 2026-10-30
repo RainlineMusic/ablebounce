@@ -33,6 +33,27 @@ internal static class Native
     [DllImport("user32.dll")] private static extern int ReleaseDC(nint window, nint dc);
     [DllImport("gdi32.dll")] private static extern uint GetPixel(nint dc, int x, int y);
 
+    private delegate bool EnumWindowCallback(nint window, nint parameter);
+    [DllImport("user32.dll")] private static extern bool EnumWindows(EnumWindowCallback callback, nint parameter);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetWindowText(nint window, System.Text.StringBuilder text, int count);
+    [DllImport("user32.dll")] private static extern bool IsWindowVisible(nint window);
+    public static bool TryExportWindow(int process, out Rect rect)
+    {
+        nint found = 0;
+        int count = 0;
+        EnumWindows((window, _) =>
+        {
+            GetWindowThreadProcessId(window, out var owner);
+            if (owner != process || !IsWindowVisible(window)) return true;
+            var title = new System.Text.StringBuilder(256);
+            GetWindowText(window, title, title.Capacity);
+            if (title.ToString().Trim() == "Export Audio/Video") { found = window; count++; }
+            return true;
+        }, 0);
+        rect = default;
+        return count == 1 && GetWindowRect(found, out rect) && rect.Width > 100 && rect.Height > 100;
+    }
+
     public static Process LiveProcess()
     {
         var processes = Process.GetProcesses().Where(p =>
@@ -101,3 +122,4 @@ internal static class Native
         return result.ToArray();
     }
 }
+

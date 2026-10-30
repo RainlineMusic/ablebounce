@@ -55,10 +55,10 @@ there is no AbleBounce disk backup for a Live process crash.
 
 ## Export profile and validation scope
 
-Six relative coordinates and visual patches are captured from the actual Live
+Three user points and six visual patches are captured from the actual Live
 English export dialog: source All Individual Tracks, bit depth 24, Export,
 bit depth 16, bit depth 32 and source Main. They cover only three controls.
-Matching exact Live patch, outer window size and DPI are required. Keep theme and
+Matching exact Live patch, export window size and DPI are required. Keep theme and
 dialog position unchanged. The driver checks the Export patch, enters source and
 bit-depth chooser values with Home/Down/Enter, then checks their captured patches.
 It does not change or verify WAV/stereo, PCM, dither, Normalize, Mono, Loop, MP3 or

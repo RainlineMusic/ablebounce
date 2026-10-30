@@ -1,4 +1,4 @@
-# AbleBounce 0.1.4
+# AbleBounce 0.1.6
 
 Plain Windows prototype for Ableton Live 12.4.x, with an English UI in both
 applications. Standard WPF controls provide Install, Connect and Calibrate,
@@ -17,8 +17,7 @@ operations on Live’s control-surface callback thread. No cloud audio processin
 physical MIDI port, separate Python installation or Max for Live is required.
 
 Export automation controls only render source (Main/All Individual Tracks),
-bit depth (16/24/32-bit float) and Export. Six F8 captures record their visual
-states. Calibration is tied to the exact Live patch, window size and display DPI;
+bit depth (16/24/32-bit float) and Export. Three F8 points locate controls; their six visual states are captured automatically. Calibration is tied to the exact Live patch, window size and display DPI;
 keep the theme and dialog position unchanged. The desktop must stay unlocked.
 
 The user sets WAV/stereo, PCM On, No Dither, Normalize/Mono/Loop/MP3/Include Return
@@ -31,6 +30,6 @@ Restore the current Set after each job and cancellation; restoration waits for
 rendering and modal dialogs to stop. Do not save temporary changes. Unsupported
 routing, frozen dry vocals and unwritable parameters fail preflight.
 
-The 0.1.2 Windows Save-dialog fix and real Windows dialog tests remain in 0.1.4.
+The 0.1.2 Windows Save-dialog fix and real Windows dialog tests remain in 0.1.6.
 The app has not been tested end to end in a licensed Live 12.4.x installation.
 Build, bridge-unit-test and demo results do not establish Live compatibility.

@@ -40,17 +40,15 @@ length for reverb/delay tails; Render as Loop is not a tail-extension feature.
 
 Return to AbleBounce and choose **Calibrate**, acknowledge the preparation
 prompt and move the floating wizard away from Live's controls. It will ask for
-six points covering three controls: source, bit depth and Export. For each one,
-bring Live to the foreground, hover over the centre of the requested value/button and press **F8**. Do not click the Export button or
-leave dropdown menus open. For the final three captures the wizard explicitly
-asks you to select Bit Depth 16, Bit Depth 32 and Rendered Track Main; select that
-value, close the chooser, then capture it. The wizard records visual references
-for source, bit-depth and Export-button verification only. The fixed export switches above
-remain your responsibility. If you capture the wrong point, use **Undo last point**.
+three points: Rendered Track, Bit Depth and Export. Hover over the displayed value
+text (not the arrow) and press F8 once for each. Do not click during the short
+final automatic capture: AbleBounce selects and records the remaining values,
+then leaves Main / 24-bit selected. Close Live's Export dialog before exporting.
 
-Keep the window size, theme, display scale and export dialog position unchanged.
-Recalibrate if those change or the exact Live patch changes. When finished,
-**close Live's Export dialog** before starting the queue.
+Live's Export Audio/Video window is located by its title and process every time.
+You can move it or resize the main Live window. Keep the export window's size,
+theme, display scale and Live patch unchanged; recalibrate if those change.
+Old six-point profiles must be replaced once.
 
 ## Run a batch
 

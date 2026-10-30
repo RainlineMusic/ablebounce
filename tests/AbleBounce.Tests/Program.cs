@@ -32,9 +32,36 @@ try
     try { new ExportProfile { Version = "12.4.6" }.Validate(new SessionInfo { Version = "12.4.5" }); }
     catch (InvalidOperationException) { calibrationRejected = true; }
     Check(calibrationRejected, "Calibration must remain specific to the exact Live patch");
-    Check(ExportProfile.Fields.Length == 6, "Calibration must contain six captures for three controls");
-    Check(ExportProfile.Fields.Select(f => f.Key).SequenceEqual(new[] { "source", "bit_depth", "export", "bit_16", "bit_32", "source_main" }),
+    Check(ExportProfile.Fields.Length == 3, "Calibration must require only three user captures");
+    Check(ExportProfile.Fields.Select(f => f.Key).SequenceEqual(new[] { "source", "bit_depth", "export" }),
         "Unexpected calibration controls");
+    Check(ExportProfile.RequiredReferences.Length == 6, "Automatic calibration must retain six verification states");
+    var shown = new TaskCompletionSource<System.Windows.Window>(TaskCreationOptions.RunContinuationsAsynchronously);
+    var windowThread = new Thread(() =>
+    {
+        var window = new System.Windows.Window { Title = "Export Audio/Video", Width = 360, Height = 720, Left = 30, Top = 30 };
+        window.Show(); shown.TrySetResult(window);
+        System.Windows.Threading.Dispatcher.Run();
+    }) { IsBackground = true };
+    windowThread.SetApartmentState(ApartmentState.STA); windowThread.Start();
+    var exportWindow = await shown.Task.WaitAsync(TimeSpan.FromSeconds(10));
+    try
+    {
+        Check(Native.TryExportWindow(Environment.ProcessId, out var first), "Export dialog not located by title/process");
+        Check(!Native.TryExportWindow(int.MaxValue, out _), "Export dialog matched a different process");
+        await exportWindow.Dispatcher.InvokeAsync(() => { exportWindow.Left += 100; exportWindow.Top += 50; });
+        Check(Native.TryExportWindow(Environment.ProcessId, out var moved), "Moved export dialog was lost");
+        Check(moved.Left != first.Left && moved.Top != first.Top && moved.Width == first.Width && moved.Height == first.Height,
+            "Moved dialog coordinates were not refreshed");
+        await exportWindow.Dispatcher.InvokeAsync(() =>
+        {
+            var duplicate = new System.Windows.Window { Title = "Export Audio/Video", Width = 360, Height = 720 };
+            duplicate.Show();
+            Check(!Native.TryExportWindow(Environment.ProcessId, out _), "Ambiguous export windows must be rejected");
+            duplicate.Close();
+        });
+    }
+    finally { await exportWindow.Dispatcher.InvokeAsync(() => { exportWindow.Close(); exportWindow.Dispatcher.InvokeShutdown(); }); }
     async Task CheckNativeSaveDialog(string directory, string filename)
     {
         Directory.CreateDirectory(directory);

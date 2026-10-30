@@ -57,9 +57,12 @@ Read [QUICK_START.md](docs/QUICK_START.md) for the complete procedure.
 5. Prepare Live's export dialog as described in the calibration prompt. Set
    the **sample rate, start and length, including effect tails**, in Live.
 6. Choose **Calibrate**. Capture the requested control positions with
-   **F8** six times: source All Individual Tracks, bit depth 24, Export, bit
-   depth 16, bit depth 32, source Main. Then close the Live export dialog.
-   Recalibrate for changes to window geometry, theme, display scale or exact Live patch.
+   **F8** three times: Rendered Track value, Bit Depth value and Export.
+   Remaining verification values are captured automatically. Do not interact
+   during that final step. Then close Live's export dialog. Moving that dialog
+   or resizing Live's main window no longer invalidates calibration; changing
+   the export window size, theme, DPI or exact Live patch requires recalibration.
+
 7. Choose variants, bit depth (16/24/32-bit float) and output folder, then export.
 
 The UI must remain visible and the desktop unlocked. Do not interact with Live

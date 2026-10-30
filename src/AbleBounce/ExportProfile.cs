@@ -15,6 +15,7 @@ public sealed class Anchor
 public sealed class ExportProfile
 {
     public string Version { get; set; } = "";
+    public int CoordinateVersion { get; set; }
     public int Width { get; set; }
     public int Height { get; set; }
     public uint Dpi { get; set; }
@@ -22,23 +23,21 @@ public sealed class ExportProfile
     public DateTime Captured { get; set; }
     public static (string Key, string Label)[] Fields =>
     [
-        ("source", "Rendered Track: All Individual Tracks"),
-        ("bit_depth", "Bit Depth chooser (currently 24)"),
+        ("source", "Rendered Track chooser"),
+        ("bit_depth", "Bit Depth chooser"),
         ("export", "Export button"),
-        ("bit_16", "Select Bit Depth 16, then point at its value"),
-        ("bit_32", "Select Bit Depth 32, then point at its value"),
-        ("source_main", "Select Rendered Track Main, then point at its value"),
     ];
+    public static string[] RequiredReferences => ["source", "bit_depth", "export", "bit_16", "bit_32", "source_main"];
     public void Validate(SessionInfo session)
     {
         if (Version != session.Version) throw new InvalidOperationException("Live version changed. Calibrate its export dialog again.");
-        foreach (var (key, _) in Fields)
-            if (!Anchors.TryGetValue(key, out var a) || a.Reference.Length != 17 * 7 * 3)
+        if (CoordinateVersion != 2 || Width <= 0 || Height <= 0)
+            throw new InvalidOperationException("Please run the new three-point calibration once.");
+        foreach (var key in RequiredReferences)
+            if (!Anchors.TryGetValue(key, out var a) || a.Reference.Length != 17 * 7 * 3
+                || a.X < 0 || a.X >= Width || a.Y < 0 || a.Y >= Height)
                 throw new InvalidOperationException("Export calibration is incomplete.");
-        var p = Native.LiveProcess();
-        Native.GetWindowRect(p.MainWindowHandle, out var rect);
-        if (rect.Width != Width || rect.Height != Height || Native.GetDpiForWindow(p.MainWindowHandle) != Dpi)
-            throw new InvalidOperationException("Live's window size or display scale changed. Restore its calibrated size or calibrate again.");
+
     }
 }
 
@@ -55,20 +54,21 @@ public sealed class CalibrationWindow : Window
     public ExportProfile? Result { get; private set; }
     public CalibrationWindow(string version)
     {
-        Title = "AbleBounce · Export calibration"; Width = 440; Height = 440;
+        Title = "AbleBounce · Export calibration"; Width = 440; Height = 500;
         Background = SystemColors.ControlBrush;
         ResizeMode = ResizeMode.NoResize; Topmost = true;
         _live = Native.LiveProcess();
-        Native.GetWindowRect(_live.MainWindowHandle, out var rect);
-        _profile = new() { Version = version, Width = rect.Width, Height = rect.Height,
+        if (!Native.TryExportWindow(_live.Id, out var rect))
+            throw new InvalidOperationException("Open Live’s Export Audio/Video window before calibration.");
+        _profile = new() { Version = version, CoordinateVersion = 2, Width = rect.Width, Height = rect.Height,
             Dpi = Native.GetDpiForWindow(_live.MainWindowHandle), Captured = DateTime.Now };
         var panel = new StackPanel { Margin = new(24) };
         panel.Children.Add(new TextBlock { Text = "Teach AbleBounce your export dialog", TextWrapping = TextWrapping.Wrap });
-        panel.Children.Add(new TextBlock { Text = "Move this window away from Live's Export dialog. Point at each requested control and press F8. For the last three steps, select the requested value first and close the chooser before pressing F8.", Margin = new(0, 12, 0, 0), TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(new TextBlock { Text = "Move this window away from Live’s Export dialog. Point at the three requested controls and press F8. AbleBounce will capture the chooser values automatically; do not click or type during that final step.", Margin = new(0, 12, 0, 0), TextWrapping = TextWrapping.Wrap });
         panel.Children.Add(_step); panel.Children.Add(_detail);
         _back.Click += (_, _) => { if (!_capturing && _index > 0) { _index--; _profile.Anchors.Remove(ExportProfile.Fields[_index].Key); UpdateStep(); } };
         panel.Children.Add(_back);
-        panel.Children.Add(new TextBlock { Text = "Keep Live's window size, theme and display scale unchanged after calibration. Press Esc to cancel.", TextWrapping = TextWrapping.Wrap, Margin = new(0, 18, 0, 0) });
+        panel.Children.Add(new TextBlock { Text = "You can move Live and its Export window afterwards. Recalibrate if the Export window size, theme, display scale or Live version changes. Press Esc to cancel.", TextWrapping = TextWrapping.Wrap, Margin = new(0, 18, 0, 0) });
         Content = panel;
         SourceInitialized += (_, _) =>
         {
@@ -84,9 +84,7 @@ public sealed class CalibrationWindow : Window
     private void UpdateStep()
     {
         _step.Text = $"{_index + 1} / {ExportProfile.Fields.Length}   {ExportProfile.Fields[_index].Label}";
-        _detail.Text = _index >= 3
-            ? "Change this chooser to the requested value in Live, close its menu, hover over the value and press F8."
-            : "Hover over this control in Live and press F8. Capture the value/switch itself, not its label.";
+        _detail.Text = "Hover over the control itself in Live and press F8. No value selection is needed.";
         _back.IsEnabled = _index > 0;
     }
     private nint Hook(nint hwnd, int msg, nint wParam, nint lParam, ref bool handled)
@@ -103,7 +101,10 @@ public sealed class CalibrationWindow : Window
         {
             Native.RequireForeground(_live.Id);
             Native.GetCursorPos(out var point);
-            Native.GetWindowRect(_live.MainWindowHandle, out var rect);
+            if (!Native.TryExportWindow(_live.Id, out var rect))
+                throw new InvalidOperationException("Live’s Export Audio/Video window was not found.");
+            if (rect.Width != _profile.Width || rect.Height != _profile.Height)
+                throw new InvalidOperationException("Export window size changed. Restart calibration.");
             if (point.X < rect.Left || point.X >= rect.Right || point.Y < rect.Top || point.Y >= rect.Bottom)
                 throw new InvalidOperationException("Point inside Live's Export dialog, then press F8.");
             Native.SetCursorPos(rect.Left + 20, rect.Top + 12);
@@ -113,12 +114,60 @@ public sealed class CalibrationWindow : Window
             _index++;
             if (_index == ExportProfile.Fields.Length)
             {
+                _step.Text = "Capturing chooser values automatically…";
+                _back.IsEnabled = false;
+                await CaptureValues();
                 Storage.Write("export-profile.json", _profile); Result = _profile; DialogResult = true;
             }
             else UpdateStep();
         }
-        catch (Exception ex) { _detail.Text = ex.Message; }
+        catch (Exception ex)
+        {
+            if (_index >= ExportProfile.Fields.Length) _index = 0;
+            UpdateStep(); _detail.Text = ex.Message;
+        }
         finally { _capturing = false; }
     }
+    private Native.Rect ExportRect()
+    {
+        Native.RequireForeground(_live.Id);
+        if (!Native.TryExportWindow(_live.Id, out var rect) || rect.Width != _profile.Width || rect.Height != _profile.Height
+            || Native.GetDpiForWindow(_live.MainWindowHandle) != _profile.Dpi)
+            throw new InvalidOperationException("Export window changed or closed. Restart calibration.");
+        return rect;
+    }
+    private async Task CaptureChoice(string control, int index, string reference)
+    {
+        var rect = ExportRect(); var anchor = _profile.Anchors[control];
+        Native.Click(rect.Left + anchor.X, rect.Top + anchor.Y);
+        await Task.Delay(180);
+        ExportRect(); Native.Key(Native.Home);
+        for (int i = 0; i < index; i++) { ExportRect(); Native.Key(Native.Down); }
+        ExportRect(); Native.Key(Native.Enter);
+        Native.SetCursorPos(rect.Left + 20, rect.Top + 12);
+        await Task.Delay(250);
+        rect = ExportRect();
+        _profile.Anchors[reference] = new() { X = anchor.X, Y = anchor.Y,
+            Reference = Native.Patch(rect.Left + anchor.X, rect.Top + anchor.Y) };
+    }
+    private async Task CaptureValues()
+    {
+        // Capture the six verification states with only three user points.
+        // Leave the dialog on Main / 24 bit and never press Export here.
+        await CaptureChoice("source", 1, "source");
+        await CaptureChoice("source", 0, "source_main");
+        await CaptureChoice("bit_depth", 0, "bit_16");
+        await CaptureChoice("bit_depth", 2, "bit_32");
+        await CaptureChoice("bit_depth", 1, "bit_depth");
+        foreach (var pair in new[] { ("source", "source_main"), ("bit_16", "bit_depth"),
+            ("bit_32", "bit_depth"), ("bit_16", "bit_32") })
+        {
+            double difference = _profile.Anchors[pair.Item1].Reference.Zip(_profile.Anchors[pair.Item2].Reference,
+                (a, b) => Math.Abs(a - b)).Average();
+            if (difference <= 8)
+                throw new InvalidOperationException("Chooser values could not be distinguished. Point at the displayed text, not the arrow or empty area, and retry.");
+        }
+    }
+
 }
 

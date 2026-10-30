@@ -100,7 +100,7 @@ public partial class MainWindow : Window
         if (_demo) { MessageBox.Show("Calibration needs a real Live export dialog."); return; }
         if (_session == null) { MessageBox.Show("Connect to Live first."); return; }
         if (MessageBox.Show(this,
-            "In Live, open Export Audio/Video (Ctrl+Shift+R).\n\nSet:\n• Rendered Track: All Individual Tracks\n• WAV, 24-bit, No Dither\n• Encode PCM: On\n• Normalize, Convert to Mono, Render as Loop, MP3: Off\n• Include Return and Main Effects: Off\n\nChoose your sample rate, render start and length (including tails). Keep Live's window size and theme unchanged.\n\nLeave that dialog open, then start calibration. Point at each requested control in Live and press F8. Do not render during calibration.",
+            "In Live, open Export Audio/Video (Ctrl+Shift+R).\n\nSet:\n• Rendered Track: All Individual Tracks\n• WAV, 24-bit, No Dither\n• Encode PCM: On\n• Normalize, Convert to Mono, Render as Loop, MP3, Create Video: Off\n• Include Return and Main Effects: Off\n\nChoose your sample rate, render start and length (including tails). Keep the export dialog size, theme and display scale unchanged.\n\nLeave that dialog open, then start calibration. Point at Rendered Track, Bit Depth and Export in Live and press F8 once for each (three times total). Point at the displayed value text, not the arrow. The remaining states are captured automatically; do not interact with Live during that step.",
             "Prepare Live's export dialog", MessageBoxButton.OKCancel, MessageBoxImage.Information) != MessageBoxResult.OK) return;
         try
         {

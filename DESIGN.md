@@ -1,6 +1,6 @@
 # AbleBounce interface
 
-AbleBounce 0.1.4 is a plain Windows prototype. Use standard, uncolored WPF buttons,
+AbleBounce 0.1.6 is a plain Windows prototype. Use standard, uncolored WPF buttons,
 DataGrids, ComboBoxes, CheckBoxes, text fields and GroupBoxes. `App.xaml` has empty
 application resources: no custom control templates, palette, brand mark, shadows
 or motion. Windows/WPF defaults provide control appearance and interaction.
@@ -20,7 +20,7 @@ rows show a checkbox, variant name and textual state. All/None buttons change th
 variant selection. The grids handle their own scrolling. Preserve native keyboard
 focus, selection and disabled rendering; communicate status with words.
 
-Calibration uses a plain WPF window and six F8 captures for three controls:
+Calibration uses a plain WPF window and three F8 captures for three controls, followed by automatic state capture:
 render source (All Individual Tracks/Main), bit depth (24/16/32) and Export.
 Fixed export switches are user-managed and must be described that way in the UI.
 Demo sessions must remain explicitly labelled. Demo rendering is not evidence of

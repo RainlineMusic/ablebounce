@@ -19,16 +19,22 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
     private void Guard()
     {
         Native.RequireForeground(Live.Id);
-        Native.GetWindowRect(Live.MainWindowHandle, out var now);
-        if (now.Width != profile.Width || now.Height != profile.Height || Native.GetDpiForWindow(Live.MainWindowHandle) != profile.Dpi)
-            throw new InvalidOperationException("Live's window geometry changed during export. Recalibrate before continuing.");
-        _rect = now;
+        if (Native.GetDpiForWindow(Live.MainWindowHandle) != profile.Dpi)
+            throw new InvalidOperationException("Live’s display scale changed. Recalibrate before continuing.");
+        if (Native.TryExportWindow(Live.Id, out var now))
+        {
+            if (now.Width != profile.Width || now.Height != profile.Height)
+                throw new InvalidOperationException("Live’s Export window size changed. Run the three-point calibration again.");
+            _rect = now;
+        }
     }
     private (int X, int Y) Position(string key)
     { var a = profile.Anchors[key]; return (_rect.Left + a.X, _rect.Top + a.Y); }
     private bool Matches(string key)
     {
-        Guard(); var (x, y) = Position(key);
+        Guard();
+        if (!Native.TryExportWindow(Live.Id, out _rect)) return false;
+        var (x, y) = Position(key);
         var actual = Native.Patch(x, y); var expected = profile.Anchors[key].Reference;
         if (actual.Length != expected.Length) return false;
         double error = actual.Zip(expected, (a, b) => Math.Abs(a - b)).Average();
@@ -36,7 +42,9 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
     }
     private async Task Click(string key, CancellationToken ct)
     {
-        Guard(); var (x, y) = Position(key); Native.Click(x, y);
+        Guard();
+        if (!Native.TryExportWindow(Live.Id, out _rect)) throw new InvalidOperationException("Live’s Export window is not open.");
+        var (x, y) = Position(key); Native.Click(x, y);
         await Task.Delay(140, ct);
     }
     private async Task Away(CancellationToken ct)
