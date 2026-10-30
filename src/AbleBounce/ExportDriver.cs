@@ -179,7 +179,19 @@ public sealed class ExportDriver(ExportProfile profile, BridgeClient bridge)
                 foreach (var file in again) WaveFile.Inspect(file, bits, exclusive: true);
                 result = again.ToList(); break;
             }
-            catch (IOException) { }
+            catch (IOException validationError)
+            {
+                // A half-written WAV is normal during rendering. Once Live
+                // confirms it is idle, wrong encoding/size is a real failure,
+                // not a reason to keep the user waiting for the full timeout.
+                try
+                {
+                    var status = await bridge.Call("status", cancellation: ct, timeoutSeconds: 3);
+                    if (status.GetProperty("idle").GetBoolean() && !ModalWindowExists(Live.Id))
+                        throw new InvalidDataException("Live finished, but the WAV could not be validated: " + validationError.Message, validationError);
+                }
+                catch (TimeoutException) { }
+            }
             catch (TimeoutException) { }
         }
         if (result.Count == 0) throw new TimeoutException("Export timed out. Keep Live open; use Restore after its render has stopped.");
