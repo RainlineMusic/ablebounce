@@ -93,6 +93,11 @@ try
         var sentinel = Path.Combine(directory, "existing.als"); File.WriteAllText(sentinel, "original");
         Reject(() => WindowsSaveDialog.Submit(dialog!, process, sentinel).GetAwaiter().GetResult(), "Save helper accepted an overwrite");
         Check(File.ReadAllText(sentinel) == "original", "Existing source was modified");
+        // The production driver hands focus from Live to its Save dialog.
+        // A console-launched CI test must explicitly establish that precondition.
+        Check(Native.GetWindowRect(dialog, out var saveRect), "Save dialog rectangle unavailable");
+        Native.Click(saveRect.Left + saveRect.Width / 2, saveRect.Top + 12);
+        await Task.Delay(350);
         await WindowsSaveDialog.Submit(dialog!, process, expected);
         var selected = await finished.Task.WaitAsync(TimeSpan.FromSeconds(20));
         Check(string.Equals(selected, expected, StringComparison.OrdinalIgnoreCase), $"Native Save path did not match. Expected: {expected}; selected: {selected}");
