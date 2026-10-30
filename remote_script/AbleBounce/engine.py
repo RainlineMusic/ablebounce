@@ -163,7 +163,7 @@ class Engine:
                 "devices": [d.name for d in t.devices],
             })
         app = self.application
-        return {"protocol": 1, "version": "%s.%s.%s" % (
+        return {"protocol": 1, "bridge_version": 3, "version": "%s.%s.%s" % (
             app.get_major_version(), app.get_minor_version(), app.get_bugfix_version()),
             "path": self.song.file_path, "name": self.song.name,
             "tracks": output, "loop_start": self.song.loop_start,
@@ -293,6 +293,14 @@ class Engine:
         if not status["idle"]:
             raise BounceError("Close Live's dialogs or finish/cancel its render before changing Set state. " + status["message"])
 
+    def return_name_prefix(self, obj, requested, actual):
+        if obj not in list(self.song.return_tracks) or not isinstance(requested, str) or not requested:
+            return None
+        if not isinstance(actual, str) or not actual.endswith(requested):
+            return None
+        prefix = actual[:-len(requested)]
+        return prefix if re.fullmatch(r"[A-Z]+[ .:\-]+", prefix) else None
+
     def write(self, obj, attribute, value, parameter=False):
         old = parameter_state(obj) if parameter else getattr(obj, attribute)
         if (old[0] if parameter else old) == value and (not parameter or old[1] != 1):
@@ -306,7 +314,9 @@ class Engine:
             if abs(float(actual) - float(value)) > 1e-5:
                 raise BounceError("Parameter write did not match the requested value.")
         elif actual != value:
-            raise BounceError("Live did not accept a state change.")
+            if attribute == "name" and self.return_name_prefix(obj, value, actual):
+                return  # Live adds the Return letter to its display name.
+            raise BounceError("Live rejected %s: expected %r, read %r" % (attribute, value, actual))
 
     def set_parameter(self, parameter, value):
         self.write(parameter, "value", float(value), True)
@@ -446,8 +456,17 @@ class Engine:
                         raise BounceError("Restoration value mismatch on " + obj.name)
                 else:
                     setattr(obj, attr, old)
-                    if getattr(obj, attr) != old:
-                        raise BounceError("Restoration readback mismatch")
+                    actual = getattr(obj, attr)
+                    if attr == "name" and actual != old:
+                        prefix = self.return_name_prefix(obj, old, actual)
+                        if prefix and old.startswith(prefix):
+                            # Do not feed Live's displayed Return prefix back
+                            # into its editable name (A-Reverb -> A-A-Reverb).
+                            setattr(obj, attr, old[len(prefix):])
+                            actual = getattr(obj, attr)
+                    if actual != old:
+                        raise BounceError("Restoration mismatch on %s.%s: expected %r, read %r" %
+                                          (getattr(obj, "name", type(obj).__name__), attr, old, actual))
             except Exception as e:
                 errors.append(str(e))
                 remaining.append((obj, attr, old, is_parameter))

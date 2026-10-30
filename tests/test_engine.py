@@ -157,6 +157,22 @@ class EngineTests(unittest.TestCase):
     def test_dry_group_child_overlap_rejected(self):
         with self.assertRaises(ab.BounceError): self.engine.begin([9], self.roles, ["t:1", "t:2"])
 
+    def test_return_display_prefix_round_trip(self):
+        class ReturnTrack(Track):
+            @property
+            def name(self): return "A-" + self._return_name
+            @name.setter
+            def name(self, value): self._return_name = value
+        self.song.return_tracks = [ReturnTrack("Reverb")]
+        before = self.snapshot()
+        token = self.begin([8])
+        self.engine.prepare(8, token)
+        self.assertIn("__AB_R0001__", self.song.return_tracks[0].name)
+        self.engine.restore()
+        self.assertEqual(before, self.snapshot())
+        self.assertIsNone(self.engine.transaction)
+        self.begin([1])  # the next Master render must not be blocked
+
     def test_all_nine_restore_to_exact_baseline(self):
         original = self.snapshot()
         token = self.begin()

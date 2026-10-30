@@ -16,6 +16,9 @@ public partial class MainWindow : Window
     private readonly bool _demo;
     private SessionInfo? _session;
     private CancellationTokenSource? _cancellation;
+    private bool _closeRequested;
+    private bool _exitApproved;
+    private Task<string>? _exportTask;
     public MainWindow(bool demo = false)
     {
         _demo = demo; InitializeComponent(); DataContext = _vm;
@@ -28,14 +31,35 @@ public partial class MainWindow : Window
         }
         Closing += OnClosing;
     }
-    private void OnClosing(object? sender, CancelEventArgs e)
+    private async void OnClosing(object? sender, CancelEventArgs e)
     {
-        if (_vm.Busy)
-        { e.Cancel = true; _vm.AddLog("Use Cancel & restore before closing glucose."); return; }
+        if (!_exitApproved && (_vm.Busy || (!_demo && _session?.Transaction != null)))
+        {
+            e.Cancel = true;
+            if (_closeRequested) return;
+            _closeRequested = true;
+            _cancellation?.Cancel();
+            _vm.AddLog("Closing: cancelling export and restoring Live…");
+            try
+            {
+                if (_exportTask != null) { try { await _exportTask; } catch { } }
+                while (_vm.Busy) await Task.Delay(100);
+                if (!_demo)
+                {
+                    var state = await _bridge.Scan();
+                    if (state.Transaction != null)
+                        await _bridge.Call("restore", new { transaction = state.Transaction, final = true }, timeoutSeconds: 30);
+                }
+                _exitApproved = true;
+                Close();
+            }
+            catch (Exception ex) { _closeRequested = false; ShowError(new InvalidOperationException("Export cancelled, but Live still needs restoration before exit: " + ex.Message)); }
+            return;
+        }
         if (!_demo)
         {
             SaveRoles();
-            Storage.Write("settings.json", new Dictionary<string, string> { ["output"] = _vm.Output, ["bitDepth"] = _vm.BitDepth });
+            Storage.Write("settings.json", new Dictionary<string, string> { ["output"] = _vm.Output });
         }
     }
     private static string RoleFile(string path) => "roles/" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(path.ToLowerInvariant())))[..24] + ".json";
@@ -52,6 +76,8 @@ public partial class MainWindow : Window
         if (session.Protocol != 1) throw new InvalidOperationException("Bridge protocol mismatch. Install the bridge included with this version.");
         if (!LiveCompatibility.IsSupported(session.Version)) throw new InvalidOperationException($"Live {session.Version} is outside the supported 12.4.x branch. Use any Live 12.4 patch release.");
         _session = session;
+        if (session.BridgeVersion < 3)
+            _vm.AddLog("Bridge update required: install the bundled bridge and restart Live after restoring pending changes.");
         var saved = string.IsNullOrWhiteSpace(session.Path) ? null : Storage.Read<Dictionary<string, SavedRole>>(RoleFile(session.Path));
         _vm.Tracks.Clear();
         var tracks = session.Tracks.Where(t => !t.Master && !t.Return).ToArray();
@@ -173,6 +199,10 @@ public partial class MainWindow : Window
     {
         if (_demo) { MessageBox.Show("This is a labelled design preview; no files are rendered. Restart without --demo to use Live."); return; }
         if (_session == null) return;
+        if (_session.BridgeVersion < 3)
+        {
+            MessageBox.Show(this, "The running Live bridge is outdated. Restore any pending changes first, then Install the bundled bridge and restart Live.", "Bridge update required"); return;
+        }
         var jobs = _vm.Deliveries.Where(d => d.Selected).Select(d => d.Id).ToArray();
         if (jobs.Length == 0) { MessageBox.Show("Choose at least one delivery variant."); return; }
         var profile = Storage.Read<ExportProfile>("export-profile.json");
@@ -194,7 +224,8 @@ public partial class MainWindow : Window
             var roles = Roles(); var bits = 0; var dryKeys = _vm.Tracks.Where(t => t.Dry).Select(t => t.Info.Key).ToArray(); var output = _vm.Output; var title = _vm.TrackTitle; var token = _cancellation.Token;
             // UI Automation can block while another application's provider is
             // busy. Keep it off WPF's dispatcher so Cancel remains responsive.
-            finished = await Task.Run(() => queue.Run(source, roles, jobs, bits, output, token, title, dryKeys));
+            _exportTask = Task.Run(() => queue.Run(source, roles, jobs, bits, output, token, title, dryKeys));
+            finished = await _exportTask;
         }
         catch (OperationCanceledException) { _vm.AddLog("Cancelled. Completed exports have been kept; see activity for restoration status."); }
         catch (Exception ex) { exportError = ex.Message; ShowError(ex); }
@@ -216,7 +247,7 @@ public partial class MainWindow : Window
             finally { _vm.Busy = false; }
             if (exportError != null) _vm.AddLog("Export stopped: " + exportError);
         }
-        if (finished != null)
+        if (finished != null && !_closeRequested)
         {
             _vm.AddLog("Export complete: " + finished);
             Process.Start(new ProcessStartInfo("explorer.exe", finished) { UseShellExecute = true });

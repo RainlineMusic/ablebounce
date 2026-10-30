@@ -42,6 +42,7 @@ public sealed class TrackInfo
 
 public sealed class SessionInfo
 {
+    public int BridgeVersion { get; set; }
     public int Protocol { get; set; }
     public string Version { get; set; } = "";
     public string Path { get; set; } = "";
