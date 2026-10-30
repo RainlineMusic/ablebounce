@@ -163,7 +163,7 @@ class Engine:
                 "devices": [d.name for d in t.devices],
             })
         app = self.application
-        return {"protocol": 1, "bridge_version": 3, "version": "%s.%s.%s" % (
+        return {"protocol": 1, "bridge_version": 4, "version": "%s.%s.%s" % (
             app.get_major_version(), app.get_minor_version(), app.get_bugfix_version()),
             "path": self.song.file_path, "name": self.song.name,
             "tracks": output, "loop_start": self.song.loop_start,
@@ -223,6 +223,13 @@ class Engine:
                 raise BounceError("Select at least one Lead track or group.")
             if not self.selected_roots("Lead") and not self.selected_roots("Backing"):
                 raise BounceError("No vocal tracks have been assigned.")
+        if any(job in (8, 9) for job in jobs):
+            names = {}
+            for track in self.all_tracks():
+                key = "".join(c.lower() for c in track.name if c.isalnum())
+                if not key or key in names:
+                    raise BounceError("Multitrack filenames are ambiguous. Give tracks distinct names before exporting: " + track.name)
+                names[key] = track
         if 9 in jobs:
             dry_tracks = set()
             for t in self.dry_roots():
@@ -406,10 +413,7 @@ class Engine:
                 for t in self.selected_roots("Lead"):
                     self.reduce_lead(t)
             elif job == 8:
-                for i, t in enumerate(self.tracks()):
-                    self.write(t, "name", "__AB_T%04d__%s" % (i + 1, t.name))
-                for i, t in enumerate(self.song.return_tracks):
-                    self.write(t, "name", "__AB_R%04d__%s" % (i + 1, t.name))
+                pass  # Never rename Live tracks: native names identify exported files.
             elif job == 9:
                 roots = self.dry_roots()
                 inherited_mute = [t for t in roots if any(p.mute for p in self.ancestors(t))]
@@ -428,10 +432,6 @@ class Engine:
                     self.write(t, "output_routing_type", self.main_routing(t))
                 for t in inherited_mute:
                     self.set_parameter(t.mixer_device.track_activator, 0)
-                for i, t in enumerate(self.tracks()):
-                    self.write(t, "name", "__AB_T%04d__%s" % (i + 1, t.name))
-                for i, t in enumerate(self.song.return_tracks):
-                    self.write(t, "name", "__AB_R%04d__%s" % (i + 1, t.name))
             if job not in range(1, 10):
                 raise BounceError("Unknown delivery variant.")
             return {"prepared": job, "transaction": self.transaction,

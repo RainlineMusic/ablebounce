@@ -1,4 +1,16 @@
-# glucose 0.2.1
+# glucose 0.2.3
+
+Multitrack and DRY export no longer rename Live tracks. Native filenames are
+matched to their original track names. Duplicate/ambiguous names are rejected
+before export; unmatched files remain in Staging for inspection.
+
+Close cancels an active export, waits for restoration and then shuts down the
+application including Activity windows. If restoration fails, the window stays
+open with an error; the export task has been cancelled.
+
+Install the updated bridge and restart Live only after resolving existing
+pending changes. The application checks the running bridge version.
+
 
 Export variants in order: Master, Mix, Instrumental Master, Instrumental Mix,
 Backing Master, Backing Mix, Multitrack / Stems, Selected Tracks (Dry).

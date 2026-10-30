@@ -128,6 +128,12 @@ try
     Check(Storage.SafeName(new string('x', 200)).Length <= 90, "Export filename was not bounded");
     Check(DeliveryRow.Create().Select(d => d.Id).SequenceEqual(new[] { 1, 4, 2, 3, 6, 5, 8, 9 }), "Delivery order changed");
     Check(DeliveryRow.Create().Select(d => d.Title).SequenceEqual(new[] { "Master", "Mix", "Instrumental Master", "Instrumental Mix", "Backing Master", "Backing Mix", "Multitrack / Stems", "Selected Tracks (Dry)" }), "Delivery labels changed");
+    var nativeSession = new SessionInfo { Tracks = [new TrackInfo { Key = "t:0", Name = "Drums" },
+        new TrackInfo { Key = "t:1", Name = "Вокал" }, new TrackInfo { Key = "master", Name = "Main", Master = true }] };
+    Check(BounceQueue.MatchNativeTrack("glucose Drums.wav", nativeSession)?.Key == "t:0", "Native track name matching failed");
+    Check(BounceQueue.MatchNativeTrack("glucose_002-Вокал.wav", nativeSession)?.Key == "t:1", "Native numbered Unicode matching failed");
+    Check(BounceQueue.MatchNativeTrack("glucose Main.wav", nativeSession) == null, "Native Main reference not recognised");
+    Reject(() => BounceQueue.MatchNativeTrack("glucose Unknown.wav", nativeSession), "Unmatched file accepted");
     var library = Path.Combine(temp, "User Library"); Directory.CreateDirectory(library);
     BridgeClient.Install(library);
     var script = Path.Combine(library, "Remote Scripts", "AbleBounce");

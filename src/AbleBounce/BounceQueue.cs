@@ -60,7 +60,7 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
                 jobState(job, "Done");
                 File.WriteAllText(Path.Combine(root, "manifest.json"), JsonSerializer.Serialize(new
                 {
-                    application = "glucose 0.2.2", live_version = source.Version, source_set = source.Path, track_title = title,
+                    application = "glucose 0.2.3", live_version = source.Version, source_set = source.Path, track_title = title,
                     bit_depth = range!.Bits, roles,
                     range = "Reused Live Export dialog start/length; sample rate set in Live", deliveries = delivered,
                     multitrack_note = "Tracks are pre-parent-bus, post-fader. Groups/Returns are alternatives; do not sum every group with all its children.",
@@ -89,6 +89,32 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
         return root;
     }
 
+    internal static TrackInfo? MatchNativeTrack(string file, SessionInfo source)
+    {
+        static string Canonical(string name) => new(name.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
+        var name = Path.GetFileNameWithoutExtension(file);
+        if (!name.StartsWith("glucose", StringComparison.OrdinalIgnoreCase))
+            throw new IOException("Unexpected native export filename: " + name);
+        var remainder = name[7..].TrimStart(' ', '_', '-', '.');
+        var key = Canonical(remainder);
+        var tracks = source.Tracks.Where(t => !t.Master && !t.Return).ToArray();
+        var returns = source.Tracks.Where(t => t.Return).ToArray();
+        var matches = new List<TrackInfo>();
+        foreach (var track in source.Tracks.Where(t => !t.Master))
+        {
+            int index = Array.FindIndex(track.Return ? returns : tracks, t => t.Key == track.Key) + 1;
+            if (key == Canonical(track.Name) || (!track.Return &&
+                (key == Canonical(index + "-" + track.Name) || key == Canonical(index.ToString("D3") + "-" + track.Name) || key == Canonical(index.ToString("D2") + "-" + track.Name)))
+                || (track.Return && index <= 26 && key == Canonical(((char)('A' + index - 1)).ToString() + "-" + track.Name)))
+                matches.Add(track);
+        }
+        bool main = key.Length == 0 || key == "main" || key == "master"
+            || source.Tracks.Any(t => t.Master && Canonical(t.Name) == key);
+        if (matches.Count == 1 && !main) return matches[0];
+        if (matches.Count == 0 && main) return null;
+        throw new IOException("Cannot uniquely match native export file to a track: " + name + ". Staging files were kept.");
+    }
+
     private static List<string> Deliver(int job, List<string> files, string root, SessionInfo source, string title, string[] dryKeys)
     {
         var result = new List<string>();
@@ -109,13 +135,11 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
             int unlabelled = 0;
             foreach (var file in files)
             {
-                var match = Regex.Match(Path.GetFileName(file), @"__AB_([TR])(\d{4})__");
-                if (!match.Success) { unlabelled++; continue; } // native Main reference
-                int index = int.Parse(match.Groups[2].Value) - 1;
-                bool isReturn = match.Groups[1].Value == "R";
+                var track = MatchNativeTrack(file, source);
+                if (track == null) { unlabelled++; continue; } // explicitly verified Main reference
+                bool isReturn = track.Return;
                 var list = isReturn ? returns : tracks;
-                if (index < 0 || index >= list.Length) throw new IOException("Unexpected exported track identifier.");
-                var track = list[index];
+                int index = Array.FindIndex(list, t => t.Key == track.Key);
                 if (!mapped.TryAdd(track.Key, file)) throw new IOException("Duplicate exported track identifier: " + track.Name);
                 if (job == 9 && !dryKeys.Contains(track.Key)) continue;
                 var folder = job == 9 ? Path.Combine(root, "Multitrack", "Dry Tracks") : Path.Combine(root, "Multitrack", isReturn ? "Returns" : track.Group ? "Groups" : "Tracks");

@@ -146,7 +146,7 @@ class EngineTests(unittest.TestCase):
         result = self.engine.prepare(9, token)
         self.assertEqual(result["source"], "All Individual Tracks")
         self.assertEqual(self.song.tracks[0].output_routing_type.display_name, "Main")
-        self.assertTrue(self.song.tracks[0].name.startswith("__AB_T0001__"))
+        self.assertEqual(self.song.tracks[0].name, "Drums")
         self.assertEqual(self.song.tracks[0].devices[0].parameters[0].value, 0)
         self.engine.restore()
         self.assertEqual(before, self.snapshot())
@@ -167,11 +167,26 @@ class EngineTests(unittest.TestCase):
         before = self.snapshot()
         token = self.begin([8])
         self.engine.prepare(8, token)
-        self.assertIn("__AB_R0001__", self.song.return_tracks[0].name)
+        self.assertEqual(self.song.return_tracks[0].name, "A-Reverb")
         self.engine.restore()
         self.assertEqual(before, self.snapshot())
         self.assertIsNone(self.engine.transaction)
         self.begin([1])  # the next Master render must not be blocked
+
+    def test_multitrack_does_not_write_track_names(self):
+        class ReadOnlyNameTrack(Track):
+            @property
+            def name(self): return self._fixed_name
+            @name.setter
+            def name(self, value):
+                if hasattr(self, "_fixed_name"): raise TypeError("Live rejects name setter")
+                self._fixed_name = value
+        self.song.tracks[0] = ReadOnlyNameTrack("Drums")
+        token = self.begin([8])
+        self.engine.prepare(8, token)
+        self.engine.restore()
+        self.assertIsNone(self.engine.transaction)
+        self.begin([1])
 
     def test_all_nine_restore_to_exact_baseline(self):
         original = self.snapshot()
@@ -264,13 +279,12 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(self.song.tracks[2].output_routing_type.display_name, "Main")
         self.assertTrue(self.song.tracks[1].mute)
 
-    def test_multitrack_has_stable_unique_markers(self):
+    def test_multitrack_rejects_ambiguous_names_before_mutation(self):
         self.song.tracks[0].name = self.song.tracks[4].name = "Same"
-        token = self.begin([8])
-        self.engine.prepare(8, token)
-        self.assertTrue(self.song.tracks[0].name.startswith("__AB_T0001__"))
-        self.assertTrue(self.song.tracks[4].name.startswith("__AB_T0005__"))
-        self.assertTrue(self.song.return_tracks[0].name.startswith("__AB_R0001__"))
+        before = self.snapshot()
+        with self.assertRaises(ab.BounceError): self.begin([8])
+        self.assertEqual(before, self.snapshot())
+        self.assertIsNone(self.engine.transaction)
 
     def test_next_job_starts_from_baseline(self):
         token = self.begin([3, 1])

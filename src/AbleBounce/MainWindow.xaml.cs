@@ -76,7 +76,7 @@ public partial class MainWindow : Window
         if (session.Protocol != 1) throw new InvalidOperationException("Bridge protocol mismatch. Install the bridge included with this version.");
         if (!LiveCompatibility.IsSupported(session.Version)) throw new InvalidOperationException($"Live {session.Version} is outside the supported 12.4.x branch. Use any Live 12.4 patch release.");
         _session = session;
-        if (session.BridgeVersion < 3)
+        if (session.BridgeVersion < 4)
             _vm.AddLog("Bridge update required: install the bundled bridge and restart Live after restoring pending changes.");
         var saved = string.IsNullOrWhiteSpace(session.Path) ? null : Storage.Read<Dictionary<string, SavedRole>>(RoleFile(session.Path));
         _vm.Tracks.Clear();
@@ -199,7 +199,7 @@ public partial class MainWindow : Window
     {
         if (_demo) { MessageBox.Show("This is a labelled design preview; no files are rendered. Restart without --demo to use Live."); return; }
         if (_session == null) return;
-        if (_session.BridgeVersion < 3)
+        if (_session.BridgeVersion < 4)
         {
             MessageBox.Show(this, "The running Live bridge is outdated. Restore any pending changes first, then Install the bundled bridge and restart Live.", "Bridge update required"); return;
         }
