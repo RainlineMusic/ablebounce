@@ -199,10 +199,18 @@ public partial class MainWindow : Window
     {
         if (_demo) { MessageBox.Show("This is a labelled design preview; no files are rendered. Restart without --demo to use Live."); return; }
         if (_session == null) return;
-        if (_session.BridgeVersion < 4)
+        try
         {
-            MessageBox.Show(this, "The running Live bridge is outdated. Restore any pending changes first, then Install the bundled bridge and restart Live.", "Bridge update required"); return;
+            _vm.Busy = true;
+            var current = await _bridge.Scan();
+            _session.BridgeVersion = current.BridgeVersion;
+            if (current.BridgeVersion < 4)
+            {
+                MessageBox.Show(this, $"Live is running bridge version {current.BridgeVersion}; version 4 or later is required. Install the bundled bridge in the actual User Library, restart Live, then Connect.", "Bridge update required"); return;
+            }
         }
+        catch (Exception ex) { ShowError(ex); return; }
+        finally { _vm.Busy = false; }
         var jobs = _vm.Deliveries.Where(d => d.Selected).Select(d => d.Id).ToArray();
         if (jobs.Length == 0) { MessageBox.Show("Choose at least one delivery variant."); return; }
         var profile = Storage.Read<ExportProfile>("export-profile.json");

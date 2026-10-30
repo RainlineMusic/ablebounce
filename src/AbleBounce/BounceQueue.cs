@@ -60,7 +60,7 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
                 jobState(job, "Done");
                 File.WriteAllText(Path.Combine(root, "manifest.json"), JsonSerializer.Serialize(new
                 {
-                    application = "glucose 0.2.3", live_version = source.Version, source_set = source.Path, track_title = title,
+                    application = "glucose 0.2.4", live_version = source.Version, source_set = source.Path, track_title = title,
                     bit_depth = range!.Bits, roles,
                     range = "Reused Live Export dialog start/length; sample rate set in Live", deliveries = delivered,
                     multitrack_note = "Tracks are pre-parent-bus, post-fader. Groups/Returns are alternatives; do not sum every group with all its children.",
@@ -119,6 +119,22 @@ public sealed class BounceQueue(BridgeClient bridge, ExportProfile profile, Acti
     {
         var result = new List<string>();
         var staging = Path.GetDirectoryName(files[0])!;
+        if (job == 8)
+        {
+            // Native All Individual Tracks already assigns unique filenames.
+            // Preserve those names; repeated track names need no guessed mapping.
+            var folder = Path.Combine(root, "Multitrack", "Stems");
+            Directory.CreateDirectory(folder);
+            foreach (var file in files)
+            {
+                var native = Path.GetFileNameWithoutExtension(file);
+                var suffix = native.StartsWith("glucose", StringComparison.OrdinalIgnoreCase) ? native[7..] : "_" + native;
+                var target = Path.Combine(folder, title + suffix + ".wav");
+                File.Move(file, target); result.Add(target);
+            }
+            if (!Directory.EnumerateFileSystemEntries(staging).Any()) Directory.Delete(staging);
+            return result;
+        }
         if (job != 8 && job != 9)
         {
             var folder = Path.Combine(root, job == 9 ? "Dry_Vocal" : "Mixes");

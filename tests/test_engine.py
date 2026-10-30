@@ -279,10 +279,12 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(self.song.tracks[2].output_routing_type.display_name, "Main")
         self.assertTrue(self.song.tracks[1].mute)
 
-    def test_multitrack_rejects_ambiguous_names_before_mutation(self):
+    def test_multitrack_allows_duplicate_track_names(self):
         self.song.tracks[0].name = self.song.tracks[4].name = "Same"
         before = self.snapshot()
-        with self.assertRaises(ab.BounceError): self.begin([8])
+        token = self.begin([8])
+        self.engine.prepare(8, token)
+        self.engine.restore()
         self.assertEqual(before, self.snapshot())
         self.assertIsNone(self.engine.transaction)
 

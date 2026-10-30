@@ -1,4 +1,14 @@
-# glucose 0.2.3
+# glucose 0.2.4
+
+Multitrack / Stems accepts duplicate track names and preserves Live's native
+export filenames in `Multitrack/Stems` (with the requested song-title prefix).
+All files produced by Live for that pass are retained, including any Main
+reference. No track-name matching or renaming is performed for this variant.
+DRY export still requires names that can be matched uniquely.
+
+Bridge compatibility is checked against a fresh scan before each batch, so a
+Live restart does not leave the application checking an obsolete cached version.
+
 
 Multitrack and DRY export no longer rename Live tracks. Native filenames are
 matched to their original track names. Duplicate/ambiguous names are rejected

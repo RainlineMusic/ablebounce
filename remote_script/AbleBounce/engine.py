@@ -223,12 +223,12 @@ class Engine:
                 raise BounceError("Select at least one Lead track or group.")
             if not self.selected_roots("Lead") and not self.selected_roots("Backing"):
                 raise BounceError("No vocal tracks have been assigned.")
-        if any(job in (8, 9) for job in jobs):
+        if 9 in jobs:
             names = {}
             for track in self.all_tracks():
                 key = "".join(c.lower() for c in track.name if c.isalnum())
                 if not key or key in names:
-                    raise BounceError("Multitrack filenames are ambiguous. Give tracks distinct names before exporting: " + track.name)
+                    raise BounceError("DRY filenames are ambiguous. Give tracks distinct names before exporting: " + track.name)
                 names[key] = track
         if 9 in jobs:
             dry_tracks = set()
