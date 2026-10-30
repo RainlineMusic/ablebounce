@@ -130,6 +130,26 @@ public partial class MainWindow : Window
         catch (Exception ex) { ShowError(ex); }
         finally { WindowState = WindowState.Normal; _vm.Busy = false; Activate(); }
     }
+    private bool _assigningRoles;
+    private TrackRow[]? _roleTargets;
+    private void Role_DropDownOpened(object sender, EventArgs e)
+    {
+        if (sender is not ComboBox { DataContext: TrackRow row }) return;
+        _roleTargets = TrackGrid.SelectedItems.Contains(row)
+            ? TrackGrid.SelectedItems.OfType<TrackRow>().ToArray() : [row];
+    }
+    private void Role_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_assigningRoles || sender is not ComboBox combo || combo.DataContext is not TrackRow row
+            || (!combo.IsDropDownOpen && !combo.IsKeyboardFocusWithin) || e.AddedItems.Count == 0
+            || e.AddedItems[0] is not string role || !TrackRow.RoleOptions.Contains(role)) return;
+        var targets = combo.IsDropDownOpen && _roleTargets != null ? _roleTargets
+            : TrackGrid.SelectedItems.Contains(row) ? TrackGrid.SelectedItems.OfType<TrackRow>().ToArray() : [row];
+        _assigningRoles = true;
+        try { foreach (var target in targets) target.Role = role; row.Role = role; }
+        finally { _assigningRoles = false; }
+        SaveRoles();
+    }
     private void MarkRemaining_Click(object sender, RoutedEventArgs e)
     {
         foreach (var t in _vm.Tracks.Where(t => (t.Role == "Unassigned" || t.Role == "Inherit") && !t.Info.Group))

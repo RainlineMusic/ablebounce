@@ -19,7 +19,7 @@
    <GroupBox Header="Track roles">
     <DockPanel Margin="6">
      <Button DockPanel.Dock="Bottom" Content="Mark remaining as Instrument" Click="MarkRemaining_Click" IsEnabled="{Binding CanExport}" Padding="6,3" Margin="0,6,0,0"/>
-     <DataGrid ItemsSource="{Binding Tracks}" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+     <DataGrid x:Name="TrackGrid" SelectionMode="Extended" SelectionUnit="FullRow" ItemsSource="{Binding Tracks}" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
       IsEnabled="{Binding Idle}" IsReadOnly="True" HeadersVisibility="Column" EnableRowVirtualization="True">
       <DataGrid.Columns>
        <DataGridTextColumn Header="#" Binding="{Binding Number}" Width="35"/>
@@ -27,7 +27,7 @@
         <TextBlock Text="{Binding Name}" Margin="{Binding Indent}" ToolTip="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
        </DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
        <DataGridTemplateColumn Header="Role" Width="110"><DataGridTemplateColumn.CellTemplate><DataTemplate>
-        <ComboBox ItemsSource="{x:Static local:TrackRow.RoleOptions}" SelectedItem="{Binding Role, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Track role"/>
+        <ComboBox ItemsSource="{x:Static local:TrackRow.RoleOptions}" SelectedItem="{Binding Role, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Track role" DropDownOpened="Role_DropDownOpened" SelectionChanged="Role_SelectionChanged"/>
        </DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
        <DataGridTemplateColumn Header="DRY" Width="45"><DataGridTemplateColumn.CellTemplate><DataTemplate>
         <CheckBox IsChecked="{Binding Dry, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanDry}" HorizontalAlignment="Center" ToolTip="Export this track without processing"/>
